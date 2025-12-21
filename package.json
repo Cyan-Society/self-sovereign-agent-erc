@@ -1,0 +1,31 @@
+{
+  "name": "self-owning-nft",
+  "version": "0.1.0",
+  "description": "Self-sovereign AI agent identity on Ethereum via recursive NFT ownership",
+  "author": "Cyan Society",
+  "license": "CC0-1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cyansociety/self-owning-nft"
+  },
+  "keywords": [
+    "ethereum",
+    "nft",
+    "erc-721",
+    "erc-6551",
+    "erc-8004",
+    "ai-agents",
+    "self-sovereign",
+    "letta",
+    "memgpt"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "deploy:testnet": "forge script scripts/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC --broadcast",
+    "verify": "forge verify-contract"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}
