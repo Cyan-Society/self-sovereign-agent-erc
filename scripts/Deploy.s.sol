@@ -15,25 +15,27 @@ contract Deploy is Script {
     // Official ERC-6551 Registry address (same on all chains)
     address constant ERC6551_REGISTRY = 0x000000006551c19487814612e58FE06813775758;
     
+    // Tokenbound V3 Account Implementation on Base Sepolia
+    // Reference: https://docs.tokenbound.org/contracts/deployments
+    address constant TOKENBOUND_ACCOUNT_V3 = 0x41C8f39463A868d3A88af00cd0fe7102F30E44eC;
+    
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         
         console.log("Deploying from:", deployer);
         console.log("Chain ID:", block.chainid);
+        console.log("Using Tokenbound V3:", TOKENBOUND_ACCOUNT_V3);
         
         vm.startBroadcast(deployerPrivateKey);
         
-        // Deploy TBA implementation first
-        // Using a simple implementation for now - in production use ERC-6551 reference
-        address tbaImplementation = address(0); // TODO: Deploy or use existing
-        
         // Deploy the Self-Sovereign Agent NFT contract
+        // Uses canonical ERC-6551 Registry and Tokenbound V3 implementation
         SelfSovereignAgentNFT agentNFT = new SelfSovereignAgentNFT(
             "Self-Sovereign Agents",
             "SSA",
             ERC6551_REGISTRY,
-            tbaImplementation
+            TOKENBOUND_ACCOUNT_V3
         );
         
         console.log("SelfSovereignAgentNFT deployed at:", address(agentNFT));
@@ -44,7 +46,7 @@ contract Deploy is Script {
         console.log("\n=== Deployment Summary ===");
         console.log("Contract:", address(agentNFT));
         console.log("ERC6551 Registry:", ERC6551_REGISTRY);
-        console.log("TBA Implementation:", tbaImplementation);
+        console.log("TBA Implementation (Tokenbound V3):", TOKENBOUND_ACCOUNT_V3);
         console.log("\nNext steps:");
         console.log("1. Verify contract on Basescan");
         console.log("2. Mint first agent NFT");
