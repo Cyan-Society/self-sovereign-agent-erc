@@ -8,9 +8,9 @@ pragma solidity ^0.8.20;
  * 
  * This interface extends ERC-721 with:
  * - Executor permission system for TEE-held keys
- * - State anchoring for Letta/MemGPT cognitive state
+ * - State anchoring for persistent cognitive state (e.g., Letta, MemGPT, or equivalent frameworks)
  * - Liveness proofs (dead man's switch) for recovery
- * - Integration hooks for ERC-8004 trustless agent registry
+ * - Recovery mechanism for agent continuity
  */
 interface ISelfSovereignAgent {
     
