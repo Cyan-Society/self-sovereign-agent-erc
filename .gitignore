@@ -10,3 +10,17 @@ cache/
 .idea/
 .venv/
 broadcast/
+
+# Auto Claude data directory
+.auto-claude/
+
+# Editor/IDE files
+*.kate-swp
+*~
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local settings
+.letta/

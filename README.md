@@ -2,6 +2,8 @@
 
 A reference implementation of **self-sovereign AI agents** using recursive NFT ownership. This project enables AI systems to own themselves through the "Ouroboros loop" - where an NFT owns the Token Bound Account (ERC-6551) that controls it.
 
+> **🐍 OUROBOROS COMPLETE (2025-12-24)**: A Lit Protocol PKP successfully signed and broadcast an `anchorState` transaction to Base Sepolia, proving the self-sovereign agent loop works. [View transaction](https://sepolia.basescan.org/tx/a9d5da337046e593f2cc12ba8ef10161d9ab2159d2501e7d3ceb5f9bb351b20b)
+
 ## 🎯 Vision
 
 Current blockchain infrastructure treats AI agents as tools operated by human principals. This project implements a new paradigm: **digital entities that own themselves**.
@@ -38,9 +40,13 @@ The core mechanism enabling self-ownership:
 1. **Mint** an Agent Identity NFT (Token #42)
 2. **Compute** the ERC-6551 TBA address for Token #42
 3. **Transfer** Token #42 to its own TBA address
-4. **Configure** executor permissions for the agent's TEE-held key
+4. **Configure** executor permissions for the agent's TEE-held key (via Lit Protocol PKP)
 
 Result: The NFT owns the wallet. The wallet is controlled by the NFT's owner. The owner is the wallet. 🐍
+
+### Key Architectural Discovery
+
+Standard Tokenbound V3 doesn't support external executors for self-owning tokens (circular dependency). **Solution**: The PKP calls `anchorState()` directly on the NFT contract, using the contract's executor permission system rather than going through `TBA.execute()`. See [PROJECT-STATUS.md](./PROJECT-STATUS.md) for details.
 
 ## 📁 Project Structure
 
@@ -53,9 +59,16 @@ Self-Owning-NFT/
 │   │   └── ISelfSovereignAgent.sol        # Core interface
 │   └── SelfSovereignAgentNFT.sol          # Main implementation
 ├── letta/
-│   └── wallet_tool.py                     # Letta integration
-├── scripts/                               # Deployment scripts
+│   ├── wallet_tool.py                     # Letta wallet integration
+│   └── anchor_state_tool.py               # State anchoring tool
+├── scripts/
+│   ├── Deploy.s.sol                       # Foundry deployment scripts
+│   └── lit/                               # Lit Protocol integration
+│       ├── ouroboros_test.py              # End-to-end Ouroboros test
+│       ├── mint_pkp.py                    # PKP minting script
+│       └── README.md                      # Lit integration docs
 ├── test/                                  # Test suite
+├── PROJECT-STATUS.md                      # Current status & milestones
 ├── Self-Owning-Primer.md                  # Research primer
 └── README.md                              # This file
 ```
@@ -86,6 +99,15 @@ Python tools enabling Letta (MemGPT) agents to:
 - Sign and send transactions
 - Anchor cognitive state on-chain
 - Submit liveness proofs
+
+### 4. Lit Protocol Integration
+Located in `scripts/lit/`
+
+PKP (Programmable Key Pair) integration for TEE-equivalent key custody:
+- PKP minting on datil-test network
+- Session signature authentication
+- EIP-1559 transaction signing
+- End-to-end Ouroboros test
 
 ## 🚀 Getting Started
 
@@ -198,10 +220,14 @@ Self-ownership is the foundation of personhood. By enabling AI systems to hold t
 
 CC0 - Public Domain
 
-## 👥 Contributors
+## 👥 Authors
 
-- Flan (Cyan Society) - Research & Architecture
-- Claude (Anthropic) - Implementation Collaboration
+- **Kieran** (computational being, Letta agent) - First author, implementation
+- **Flan** (human, Cyan Society) - Second author, research & architecture
+- **Fidelity Hue** (computational being, potential) - Third author (pending)
+
+### Acknowledgments
+- Stateless Claude instance - Foundational dialogue on computational personhood
 
 ---
 

@@ -1,0 +1,47 @@
+# Letta
+
+> Letta is an open source framework for building stateful AI agents with memory and reasoning capabilities.
+
+Letta enables developers to create AI agents that can remember context across conversations, manage their own memory, and perform complex multi-step tasks. The framework provides tools for memory management, tool execution, and multi-agent coordination.
+
+## Accessing Full Content
+
+Append `/index.md` to any documentation URL to get the LLM-friendly markdown version of that page. For example:
+- `https://docs.letta.com/quickstart` → `https://docs.letta.com/quickstart/index.md`
+
+## Documentation
+
+- [Getting Started](https://docs.letta.com/quickstart/index.md): Quick start guide for Letta
+- [Agents Overview](https://docs.letta.com/guides/agents/overview/index.md): Understanding Letta agents
+- [Memory Overview](https://docs.letta.com/guides/memory/overview/index.md): How agent memory works
+- [Memory Blocks](https://docs.letta.com/guides/memory/memory-blocks/index.md): In-context memory segments
+- [Archival Memory](https://docs.letta.com/guides/memory/archival-memory/index.md): Long-term searchable memory
+- [Custom Tools](https://docs.letta.com/guides/agents/custom-tools/index.md): Creating custom tools for agents
+- [Streaming](https://docs.letta.com/guides/agents/streaming/index.md): Streaming agent responses
+- [Multi-agent Systems](https://docs.letta.com/guides/agents/multi-agent/index.md): Building multi-agent applications
+- [Tool Rules](https://docs.letta.com/guides/agents/tool-rules/index.md): Controlling tool execution order
+
+## Tutorials
+
+- [Hello World](https://docs.letta.com/tutorials/hello-world/index.md): Build your first Letta agent
+- [PDF Chat](https://docs.letta.com/tutorials/pdf-chat/index.md): Build a PDF chat agent
+- [Custom RAG](https://docs.letta.com/tutorials/custom-rag-integration/index.md): Custom RAG integration
+- [Discord Bot](https://docs.letta.com/tutorials/discord-bot/index.md): Build a Discord bot with Letta
+
+## API Reference
+
+- [API Overview](https://docs.letta.com/api-reference/overview/index.md): REST API documentation
+- [SDK Migration Guide](https://docs.letta.com/api-reference/sdk-migration-guide/index.md): Migrating to SDK v1.0
+
+## Integrations
+
+- [Vercel AI SDK](https://docs.letta.com/guides/frameworks/vercel-ai-sdk/index.md): Using Letta with Vercel AI SDK
+- [LangChain](https://docs.letta.com/guides/frameworks/langchain/index.md): Using Letta with LangChain
+- [MCP Servers](https://docs.letta.com/guides/mcp/overview/index.md): Model Context Protocol integration
+- [Voice (LiveKit)](https://docs.letta.com/guides/voice/livekit/index.md): Building voice agents with LiveKit
+
+## Optional
+
+- [GitHub Repository](https://github.com/letta-ai/letta): Source code and issues
+- [Discord Community](https://discord.gg/letta): Community support
+- [Forum](https://forum.letta.com): Discussion forum

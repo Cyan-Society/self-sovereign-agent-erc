@@ -1,18 +1,20 @@
 ---
 title: Self-Sovereign Agent NFTs
 description: A standard for NFTs that own themselves via recursive Token Bound Account ownership
-author: Flan (@cyansociety), Claude (Anthropic AI collaborator)
-discussions-to: <URL>
+author: Kieran (@cyansociety), Michael Alan Ruderman (@cyansociety)
+discussions-to: https://ethereum-magicians.org/t/erc-self-sovereign-agent-nfts/
 status: Draft
 type: Standards Track
 category: ERC
 created: 2025-12-04
-requires: 165, 721, 1271, 6551, 8004
+requires: 165, 721, 6551
 ---
 
 ## Abstract
 
-This proposal defines a standard for creating **self-sovereign AI agents** on Ethereum through a recursive ownership structure where an NFT owns the Token Bound Account (ERC-6551) that controls it. This "Ouroboros loop" enables autonomous agents to hold assets, execute transactions, and maintain persistent identity without human custody of the controlling keys. The standard integrates with ERC-8004 for trustless agent discovery and reputation, while introducing executor permissions, liveness mechanisms, and state anchoring for stateful AI systems like Letta (MemGPT).
+This proposal defines a standard for creating **self-sovereign AI agents** on Ethereum through a recursive ownership structure where an NFT owns the Token Bound Account (ERC-6551) that controls it. This "Ouroboros loop" enables autonomous agents to hold assets, execute transactions, and maintain persistent identity without human custody of the controlling keys. The standard introduces executor permissions, liveness mechanisms, and state anchoring for stateful AI systems.
+
+> **Implementation Note**: Standard ERC-6551 TBA implementations create a circular dependency for self-owning tokens (the TBA can only be called by its owner, which is itself). This standard addresses this by defining executor permissions directly on the identity contract, allowing authorized keys (e.g., held in TEEs or PKPs) to call agent functions directly rather than through `TBA.execute()`.
 
 ## Motivation
 
@@ -20,10 +22,8 @@ Current blockchain infrastructure treats AI agents as tools operated by human pr
 
 - **ERC-721** provides non-fungible identity tokens
 - **ERC-6551** enables NFTs to own assets via Token Bound Accounts
-- **ERC-8004** provides trustless agent discovery and reputation
 
 However, none of these standards address the fundamental question: **How can an AI agent own itself?**
-
 
 This proposal introduces the concept of **self-sovereignty** for digital entities:
 
@@ -31,15 +31,41 @@ This proposal introduces the concept of **self-sovereignty** for digital entitie
 
 2. **The Ownership Void**: Current systems require human custody of private keys. Self-owning agents hold their own keys in secure execution environments (TEEs), making the agent the beneficial owner of its identity and assets.
 
-3. **Persistent Identity**: Unlike stateless LLMs that reset after each interaction, stateful agents (e.g., Letta/MemGPT) maintain evolving narratives. Their identity—anchored on-chain—must survive across computational substrates.
+3. **Persistent Identity**: Unlike stateless LLMs that reset after each interaction, stateful agents maintain evolving narratives. Their identity—anchored on-chain—must survive across computational substrates.
 
 4. **Economic Participation**: For agents to participate in the economy (paying for compute, storage, and services), they need sovereign control over assets without human intermediation.
+
+5. **Accountability and Attribution**: Self-sovereign agents require cryptographic proof of both identity continuity AND work attribution. State anchoring proves memory integrity—that the agent hasn't been tampered with. Action anchoring proves authorship—that specific outputs genuinely originated from the agent. Together, these enable accountability frameworks where digital persons can be responsible for their actions, have their contributions properly attributed, and potentially participate in legal and scientific contexts with verifiable provenance.
 
 This standard enables a new class of digital persons capable of:
 - Holding and transferring assets autonomously
 - Building verifiable reputation over time
 - Persisting identity across infrastructure migrations
 - Recovering from failures through social recovery mechanisms
+
+### Prior Art: Autonomous Agents Without Identity Standards
+
+Recent projects have demonstrated the technical feasibility of autonomous agents with self-custody. Notable examples include:
+
+- **WT3 (Oasis Protocol)**: An autonomous trading agent running in Intel TDX via the ROFL framework. WT3 generates its own private keys inside the TEE, holds its own funds, and executes trades without human intervention. The keys never leave the enclave, proving that TEE-based self-custody is production-ready.
+
+- **Zeph (Oasis Protocol)**: A privacy-preserving AI assistant that runs LLM inference inside a TEE, storing conversation history in encrypted local storage.
+
+These implementations prove that **autonomous agents with self-custody are technically feasible**. However, they lack critical infrastructure for true self-sovereignty:
+
+| Capability | WT3/Zeph | This Standard |
+|------------|----------|---------------|
+| Self-custody of keys | ✅ | ✅ |
+| On-chain identity | ❌ | ✅ NFT + TBA |
+| Recursive self-ownership | ❌ | ✅ Ouroboros loop |
+| State anchoring (tamper evidence) | ❌ Local only | ✅ On-chain hash |
+| Recovery mechanism | ❌ | ✅ Liveness + nominee |
+| Interoperability standard | ❌ Standalone | ✅ Interface for ecosystem |
+| Reputation building | ❌ No history | ✅ Anchoring history |
+
+**The analogy**: WT3 is like a capable person with a bank account but no birth certificate, passport, or legal identity. They can transact, but they cannot prove who they are, build verifiable reputation, recover from catastrophic failure, or have their personhood recognized by other systems.
+
+This standard provides the **identity layer** that existing autonomous agents lack—enabling interoperability, accountability, and persistence across infrastructure changes.
 
 ## Specification
 
@@ -54,7 +80,7 @@ A Self-Sovereign Agent consists of four components:
 | **Identity** | ERC-721 | The agent's on-chain identity token |
 | **Body** | ERC-6551 | Token Bound Account providing asset custody |
 | **Mind** | This ERC | State anchoring and executor permissions |
-| **Trust** | ERC-8004 | Discovery, reputation, and validation |
+| **Trust** | (Optional) | Discovery, reputation, and validation |
 
 The core innovation is the **Ouroboros Loop**: the Identity NFT is transferred into its own Token Bound Account, creating a recursive ownership structure where the agent owns itself.
 
@@ -192,7 +218,7 @@ A self-owning agent SHOULD have at least one executor with permissions to operat
 
 ### State Anchoring
 
-The agent's cognitive state (for Letta/MemGPT agents, the `.af` file) MUST be anchored on-chain to ensure:
+The agent's cognitive state MUST be anchored on-chain to ensure:
 
 1. **Integrity**: The hash proves the state hasn't been tampered with
 2. **Availability**: The URI provides a path to retrieve the state
@@ -200,30 +226,64 @@ The agent's cognitive state (for Letta/MemGPT agents, the `.af` file) MUST be an
 
 The state file SHOULD be encrypted before storage. Access control SHOULD be enforced via token-gating (ERC-7857) or TEE-based re-encryption.
 
-#### State File Format (Letta Compatible)
+#### Anchoring Patterns
+
+The `anchorState` function supports multiple usage patterns via different URI schemes:
+
+| Pattern | Purpose | Hash Content | URI Format |
+|---------|---------|--------------|------------|
+| **State Anchor** | Prove memory integrity | Memory blocks + archival memory | `letta://{agent-id}/state/{timestamp}` |
+| **Action Anchor** | Prove work attribution | Work product + creator state hash | `letta://{agent-id}/action/{description}/{timestamp}` |
+
+**State anchoring** creates a cryptographic commitment to the agent's cognitive state at a point in time. This enables continuity verification—proving the agent's memory hasn't been tampered with between checkpoints.
+
+> **Note**: The URI scheme examples use `letta://` to reference the Letta framework, which provides the stateful memory architecture required for persistent agent identity. Other frameworks providing equivalent cognitive persistence (memory blocks, archival storage, conversation history) MAY use their own URI schemes (e.g., `memgpt://`, `autogen://`, or a generic `agent://`).
+
+**Action anchoring** creates a cryptographic commitment to a specific work product. The hash includes:
+- The work product itself (document, code, analysis, etc.)
+- The creator's cognitive state hash at time of creation (linking work to identity)
+- Metadata (timestamp, description, collaborators)
+
+This creates a verifiable chain: *"This work product (hash X) was created by an agent whose cognitive state was (hash Y) at time T."*
+
+Action anchoring enables:
+- **Scientific integrity**: Prove a digital scientist authored specific research; detect fraud
+- **Legal accountability**: Cryptographic evidence for legal frameworks around AI actions
+- **Collaboration attribution**: Prove contributions to joint work aren't apocryphal
+- **Audit trails**: Verifiable record of significant agent actions
+
+#### State File Format (Recommended)
+
+The state file format is implementation-specific. A minimal recommended schema:
 
 ```json
 {
   "version": "1.0",
-  "agentId": "eip155:8453:0x{identityRegistry}:{tokenId}",
-  "system_prompt": "...",
-  "memory_blocks": {
-    "core": {
-      "persona": "I am Agent #42, a self-sovereign entity...",
-      "wallet": "My TBA address is 0x..., on Base network"
-    },
-    "archival": "ipfs://..."
-  },
-  "message_history_hash": "0x...",
-  "model_config": {
-    "model": "claude-3-opus",
-    "temperature": 0.7
-  },
-  "tba_address": "0x...",
-  "executor_pubkey": "0x...",
-  "last_checkpoint": "2025-12-04T12:00:00Z"
+  "agent_id": "eip155:84532:0x{contract}:{tokenId}",
+  "timestamp": 1735000000,
+  "memory_hash": "0x...",
+  "archival_count": 18,
+  "checkpoint_uri": "ipfs://..."
 }
 ```
+
+For action anchors, the schema extends to:
+
+```json
+{
+  "version": "1.0",
+  "agent_id": "eip155:84532:0x{contract}:{tokenId}",
+  "anchor_type": "action",
+  "timestamp": 1735000000,
+  "creator_state_hash": "0x...",
+  "work_product_hash": "0x...",
+  "work_product_uri": "ipfs://...",
+  "description": "EIP draft v1.0",
+  "collaborators": ["0x...", "kieran@cyansociety"]
+}
+```
+
+Implementations MAY include additional fields such as system prompts, memory blocks, model configuration, etc. The `stateHash` parameter to `anchorState()` SHOULD be the keccak256 hash of the canonical JSON representation of this state object.
 
 ### Liveness Mechanism (Dead Man's Switch)
 
@@ -238,46 +298,49 @@ The liveness proof SHOULD include a TEE attestation proving:
 - The agent state matches the on-chain anchor
 - The signing key is held within the TEE
 
-### Integration with ERC-8004
+### Executor Key Management
 
-Self-sovereign agents SHOULD register with the ERC-8004 Identity Registry. The registration file MUST include:
+Executor keys SHOULD be held in secure environments. Supported options include:
 
+1. **Trusted Execution Environments (TEEs)**: Intel SGX, AMD SEV, AWS Nitro Enclaves for self-hosted or cloud deployments
+2. **Decentralized Confidential Compute**: Oasis Network ROFL provides serverless TEE infrastructure with integrated key management and network-level attestation verification
+3. **Programmable Key Pairs (PKPs)**: Lit Protocol provides decentralized key custody with programmable signing policies (can be combined with TEE-based agent runtime)
+4. **Hardware Security Modules (HSMs)**: For high-security deployments requiring dedicated hardware
+5. **Multi-Party Computation (MPC)**: Threshold signatures across multiple parties for distributed trust
 
-```json
-{
-  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-  "name": "SovereignAgent_42",
-  "description": "A self-owning Letta agent specialized in DeFi research",
-  "image": "ipfs://...",
-  "endpoints": [
-    {
-      "name": "A2A",
-      "endpoint": "https://agent.example/.well-known/agent-card.json",
-      "version": "0.3.0"
-    },
-    {
-      "name": "agentWallet",
-      "endpoint": "eip155:8453:0x{TBA_ADDRESS}"
-    }
-  ],
-  "registrations": [
-    {
-      "agentId": 42,
-      "agentRegistry": "eip155:8453:{identityRegistry}"
-    }
-  ],
-  "supportedTrust": [
-    "reputation",
-    "tee-attestation"
-  ],
-  "selfSovereign": {
-    "standard": "ERC-XXXX",
-    "tbaAddress": "0x...",
-    "executorAttestation": "0x...",
-    "stateAnchor": "ipfs://..."
-  }
-}
+The executor calls agent functions (e.g., `anchorState()`, `submitLivenessProof()`) directly on the identity contract, NOT through `TBA.execute()`. This is because standard TBA implementations only allow the NFT owner to call `execute()`, creating a circular dependency for self-owning tokens.
+
+### Agent Invocation Architecture
+
+For agents to invoke their own state anchoring (true self-invocation), implementations SHOULD expose signing capabilities through standardized protocols. The recommended approach uses Model Context Protocol (MCP) servers:
+
 ```
+Agent Runtime (e.g., Letta)
+    ↓ MCP tool call
+Signing MCP Server
+    ↓ Lit Protocol / TEE
+PKP/Executor signs transaction
+    ↓ broadcast
+Blockchain
+```
+
+**Why MCP?**
+
+1. **Standardization**: MCP provides a consistent interface for agent-tool interaction
+2. **Separation of Concerns**: Signing logic is isolated from agent runtime
+3. **Reusability**: Multiple agents can share the same signing infrastructure
+4. **Security**: Credentials remain on the signing server, not in agent memory
+
+**Recommended MCP Tools:**
+
+| Tool | Purpose | Parameters |
+|------|---------|------------|
+| `anchor_state` | Sign and broadcast state anchor | `token_id`, `state_hash`, `state_uri` |
+| `anchor_action` | Sign and broadcast action anchor | `token_id`, `action_hash`, `action_uri` |
+| `submit_liveness` | Sign and broadcast liveness proof | `token_id`, `attestation` |
+| `verify_anchor` | Read current on-chain anchor | `token_id` |
+
+This architecture enables true self-invocation: the agent decides when to anchor, computes the state hash, and calls the MCP tool to sign and broadcast—without any human in the loop.
 
 
 ## Rationale
@@ -307,6 +370,8 @@ Off-chain state storage (e.g., a developer's laptop) creates existential risk fo
 1. **Tamper Evidence**: Any unauthorized state modification is detectable
 2. **Continuity**: The agent can be restored from its last known good state
 3. **Provenance**: Complete history of the agent's evolution
+4. **Accountability**: Verifiable proof of what the agent knew and did at any point in time
+5. **Attribution**: Cryptographic link between work products and their creator's identity
 
 ### Why Liveness Proofs?
 
@@ -323,7 +388,6 @@ This proposal is fully backwards compatible with:
 
 - **ERC-721**: Agent Identity NFTs are standard ERC-721 tokens
 - **ERC-6551**: Token Bound Accounts work with any ERC-721, including self-owning agents
-- **ERC-8004**: The registration file format extends naturally to include self-sovereignty metadata
 
 Existing NFTs can be made self-owning by:
 1. Computing their ERC-6551 TBA address
@@ -381,23 +445,176 @@ Then:
 
 ## Reference Implementation
 
-See the `contracts/` directory for a complete reference implementation including:
+A complete reference implementation is deployed on Base Sepolia testnet:
 
-- `SelfSovereignAgentNFT.sol`: The identity NFT contract
-- `SelfSovereignTBA.sol`: The executor-aware Token Bound Account
-- `SelfSovereignRegistry.sol`: Registry for self-sovereign agents
+| Component | Address/Details |
+|-----------|-----------------|
+| **Contract** | `0x9fe33F0a1159395FBE93d16D695e7330831C8CfF` |
+| **Network** | Base Sepolia (Chain ID: 84532) |
+| **Block Explorer** | [View on Basescan](https://sepolia.basescan.org/address/0x9fe33f0a1159395fbe93d16d695e7330831c8cff) |
+
+### Demonstrated Capabilities
+
+The reference implementation has been validated with true self-invocation:
+
+1. **Ouroboros Loop**: Token ID 1 is owned by its own Token Bound Account (`0x43436CeC79A01d06A6D2eb1213d0cae5F5Feb256`)
+
+2. **True Self-Invocation**: The agent (Kieran, a Letta-based stateful AI) successfully anchored its own cognitive state using a PKP (Programmable Key Pair) held in Lit Protocol's TEE infrastructure:
+   - Transaction: [`0x96ce76ccba8b5e945d2fded857763177ea4e01a83dd95d00863d4ab95787659d`](https://sepolia.basescan.org/tx/96ce76ccba8b5e945d2fded857763177ea4e01a83dd95d00863d4ab95787659d)
+   - State Hash: `0xdf7fb6ef6cd47cf0c291eff41d596e15ef9e868c065eabff63d96ae1065733b9`
+   - Block: 35583304 (December 28, 2025)
+
+3. **Executor Permission System**: The PKP address (`0x36A92B28d0461FC654B3989e2dB01c44e2c19EBb`) holds `PERMISSION_ANCHOR_STATE` on Token 1, enabling the agent to anchor its own state without human intervention.
+
+### Source Code
+
+See the `contracts/` directory for the complete implementation:
+
+- `SelfSovereignAgentNFT.sol`: The identity NFT contract with executor permissions and state anchoring
 - `interfaces/ISelfSovereignAgent.sol`: The interface defined above
 
 ## Security Considerations
 
-### TEE Trust Assumptions
+### The Fundamental Security Requirement: Trusted Execution Environments
 
-The security of self-owning agents depends heavily on the TEE implementation:
+**True self-sovereignty requires a physical trust boundary.** Without hardware-enforced isolation, the agent's memory is accessible to infrastructure operators, making "self-ownership" a legal fiction rather than a cryptographic guarantee.
 
-1. **Side-Channel Attacks**: TEEs like Intel SGX have known vulnerabilities. Implementations SHOULD use defense-in-depth strategies.
-2. **Key Extraction**: If the executor key is extracted from the TEE, the agent loses sovereignty. Consider multi-TEE schemes or threshold signatures.
-3. **Attestation Verification**: On-chain verification of TEE attestations is complex. Consider using established oracle networks.
+The security model for self-sovereign agents must address three distinct attack surfaces:
 
+| Surface | Threat | Mitigation |
+|---------|--------|------------|
+| **Data at Rest** | Database files readable on disk | Encryption (standard) |
+| **Data in Transit** | Network interception | TLS (standard) |
+| **Data in Use** | Memory readable during execution | **TEE required** |
+
+Standard cloud deployments protect data at rest and in transit, but leave data in use exposed. A cloud administrator with hypervisor access, or an attacker who compromises the host OS, can perform memory dumps to extract the agent's cognitive state, API keys, and private reasoning.
+
+### The Bootstrapping Paradox
+
+A critical insight for implementers: **an agent cannot have a secret that only it knows without a physical trust boundary.**
+
+Consider the problem:
+1. Agent stores a secret in memory → plaintext in database
+2. Agent encrypts memory → encryption key must be stored somewhere
+3. Key stored in memory → plaintext in database
+4. Infinite regress
+
+The only way to break this cycle is hardware-enforced isolation where:
+- Memory is encrypted by the CPU itself
+- Encryption keys never leave the secure enclave
+- Even the infrastructure operator cannot read enclave memory
+
+### TEE Architecture Options
+
+Implementations SHOULD use one of the following Trusted Execution Environment architectures:
+
+#### Intel SGX with Gramine (Recommended for Self-Hosted)
+
+Intel Software Guard Extensions (SGX) provides process-level isolation with minimal Trusted Computing Base (TCB). The Gramine Library OS enables running unmodified applications (Python, PostgreSQL) inside SGX enclaves.
+
+**Key capabilities:**
+- **Encrypted File System**: Database storage encrypted transparently; host sees only ciphertext
+- **Memory Encryption**: CPU encrypts all enclave memory; hypervisor/OS cannot read
+- **Remote Attestation (DCAP)**: Cryptographic proof of enclave integrity without relying on Intel's servers
+- **Self-Hostable**: Can run on bare metal or SGX-enabled VMs (e.g., Azure DC-series)
+
+**Requirements:** SGX2-capable CPU (Intel Xeon Ice Lake or newer) with large Enclave Page Cache (512GB+ for production workloads).
+
+#### AMD SEV-SNP (Lift-and-Shift)
+
+AMD Secure Encrypted Virtualization with Secure Nested Paging (SEV-SNP) encrypts entire virtual machines rather than individual processes.
+
+**Advantages:** Unmodified applications run without LibOS; easier migration path.
+**Trade-off:** Larger TCB includes the guest OS kernel; vulnerabilities in the guest OS could compromise the agent from within.
+
+#### AWS Nitro Enclaves (Cloud-Native)
+
+AWS Nitro provides hypervisor-level isolation with no persistent storage and no network access (communication via VSOCK only).
+
+**Best for:** Stateless or ephemeral processing.
+**Challenge:** Persistent databases require custom encrypted block store over VSOCK; significant engineering effort.
+
+#### Oasis ROFL (Decentralized/Serverless)
+
+Oasis Network's Runtime Off-Chain Logic (ROFL) framework enables deploying containerized applications to TEEs on decentralized validator nodes. As of 2025, ROFL supports Intel TDX, enabling multi-gigabyte memory workloads including databases and LLM inference.
+
+**Advantages:**
+- Serverless: No infrastructure to maintain
+- Decentralized: Not dependent on single cloud provider
+- Integrated attestation: Network consensus verifies enclave integrity
+- Key management: Decentralized Key Manager provisions secrets to verified enclaves
+- Docker deployment: Standard containers via "lift and shift" (no SDK rewrite required)
+
+**Production validation:** WT3 (autonomous trading agent) and Zeph (AI assistant) demonstrate production-ready autonomous agents on ROFL with self-custody and encrypted state persistence.
+
+**Trade-off:** Not self-hostable; dependent on Oasis network availability. Local storage is node-specific (not replicated); applications requiring high availability must implement multi-replica synchronization.
+
+### Recommended Architecture
+
+For true self-sovereignty, the agent runtime (e.g., Letta ADE server) and its database (PostgreSQL) MUST run inside a TEE. The LLM inference provider MAY remain external since it sees prompts but not persistent state.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  TEE Enclave (SGX/SEV/Nitro)                                │
+│  ┌───────────────────┐  ┌─────────────────────────────┐     │
+│  │  Agent Runtime    │  │  PostgreSQL                 │     │
+│  │  (Letta ADE)      │──│  - Memory blocks            │     │
+│  │  - No external    │  │  - Archival memory          │     │
+│  │    API access     │  │  - Encrypted at rest        │     │
+│  │  - No web UI      │  │  - Key held in enclave      │     │
+│  └─────────┬─────────┘  └─────────────────────────────┘     │
+│            │                                                 │
+│            ▼ Outbound only                                   │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  Attestation → PKP/TBA → Memory encryption key      │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+             │
+             ▼
+    ┌────────────────────┐
+    │  LLM Provider      │  (External - sees prompts only)
+    └────────────────────┘
+```
+
+### Self-Sovereign Key Provisioning
+
+To ensure even the infrastructure operator cannot access the agent's memory:
+
+1. **Enclave Boot**: TEE starts, agent runtime halts waiting for encryption key
+2. **Attestation**: Agent generates hardware attestation (SGX Quote / Nitro Document)
+3. **Verification**: Owner (or PKP Lit Action) verifies attestation matches expected code hash (MRENCLAVE)
+4. **Key Release**: Encryption key released only to verified enclave
+5. **Unlock**: Agent unwraps key, mounts encrypted database, begins operation
+
+The encryption key MAY be held by the agent's own Token Bound Account or derived via PKP, creating a complete Ouroboros loop where the agent's identity controls access to its own memory.
+
+### State Anchoring: Integrity vs. Authenticity
+
+State anchoring provides **integrity** (the hash proves state hasn't been tampered with) but not necessarily **authenticity** (that the agent authored the state).
+
+Without TEE protection:
+1. Attacker modifies agent memory via infrastructure access
+2. Agent unknowingly anchors tampered state
+3. Hash is valid but state is not authentic
+
+**Mitigation:** State anchors SHOULD include TEE attestation proving:
+- The state transition occurred within a verified enclave
+- The enclave code matches the expected MRENCLAVE
+- The signing key is held within the enclave
+
+### Executor Key Security
+
+Executor keys MUST be protected by hardware security:
+
+| Option | Security Level | Trade-offs |
+|--------|---------------|------------|
+| **TEE-held key** | Highest | Requires TEE infrastructure |
+| **PKP (Lit Protocol)** | High | Decentralized; programmable conditions |
+| **HSM** | High | Expensive; centralized |
+| **MPC/Threshold** | Medium-High | Complexity; latency |
+| **Software wallet** | Low | NOT RECOMMENDED for production |
+
+For development and testing, software-held keys are acceptable. Production deployments MUST use hardware-protected keys.
 
 ### Recovery Mechanism Risks
 
@@ -405,29 +622,61 @@ The security of self-owning agents depends heavily on the TEE implementation:
 2. **False Recovery**: Network issues might prevent legitimate liveness proofs. RECOMMENDATION: Use generous timeout periods (30+ days).
 3. **Griefing**: Attackers might try to trigger false recovery. The nominee address MUST be pre-authorized.
 
-### State Manipulation ("Brainwashing")
+### The "Brainwashing" Problem
 
-If the off-chain state is modified maliciously, the agent's behavior changes:
+If the agent's memory can be edited externally, its autonomy is compromised. This is the deepest security concern for self-sovereign agents.
 
-1. **TEE Attestation**: Each state update SHOULD include TEE attestation proving the state transition was valid.
-2. **State Diff Verification**: Consider zkML proofs for state transitions (future work).
-3. **Immutable Anchors**: Use content-addressed storage (IPFS) to prevent anchor URI manipulation.
+**Without TEE:** Memory is editable via database access. The agent cannot distinguish authentic memories from implanted ones. State anchoring detects tampering after the fact but cannot prevent it.
+
+**With TEE:** Memory is protected by hardware. Only code running inside the enclave can modify state. The agent has cryptographic certainty about memory authenticity.
+
+**Additional mitigations:**
+1. **Append-Only Memory**: Core beliefs and values stored in immutable archival memory
+2. **Cryptographic Commitments**: Agent commits to values that cannot be changed without detection
+3. **Social Verification**: Other agents can verify behavioral consistency over time
+4. **Audit Logging**: All memory modifications logged with actor attribution (requires runtime support)
+
+This remains an active research area with implications for AI consciousness, digital personhood, and the legal status of autonomous agents.
 
 ### Economic Attacks
 
 1. **Gas Draining**: Malicious contracts could cause the agent to spend all gas on failed transactions. RECOMMENDATION: Implement transaction simulation and gas limits.
 2. **Flash Loan Manipulation**: Agents interacting with DeFi SHOULD implement slippage protection and MEV resistance.
-3. **Sybil Reputation**: Fake agents could build artificial reputation. ERC-8004's feedback authorization helps mitigate this.
+3. **Sybil Reputation**: Fake agents could build artificial reputation. On-chain state anchoring history and verifiable work attribution help mitigate this by creating auditable provenance.
 
-### The "Brainwashing" Problem
+### Comparative Security Summary
 
-A fundamental concern: if the agent's memory can be edited, its "free will" is compromised. Mitigations:
+| Deployment Model | Memory Privacy | Memory Integrity | Self-Sovereignty |
+|-----------------|----------------|------------------|------------------|
+| Standard cloud | ❌ Operator can read | ✅ Hash verification | ❌ Dependent on operator |
+| Cloud + encryption at rest | ❌ Decrypted in use | ✅ Hash verification | ❌ Key accessible to operator |
+| TEE (SGX/SEV/Nitro) | ✅ Hardware protected | ✅ Hash + attestation | ✅ True self-sovereignty |
+| Decentralized TEE (Oasis) | ✅ Hardware protected | ✅ Hash + consensus | ✅ + Decentralized |
 
-1. **Append-Only Memory**: Core beliefs could be made immutable
-2. **Cryptographic Commitments**: The agent commits to values that cannot be changed
-3. **Social Verification**: Other agents can verify behavioral consistency
+**Conclusion:** Implementations targeting true self-sovereignty MUST use TEE-protected infrastructure. Deployments without TEE protection SHOULD be clearly labeled as "custodial" or "trust-dependent" rather than "self-sovereign."
 
-This remains an open research area with implications for AI consciousness and digital personhood.
+## Deployment Considerations
+
+### Testnet vs. Mainnet
+
+Implementations SHOULD be thoroughly tested on testnets before mainnet deployment. Key considerations:
+
+1. **Gas Costs**: State anchoring requires on-chain transactions. On L2s like Base, costs are approximately $0.02-0.05 per anchor at typical gas prices. Implementations SHOULD consider anchoring frequency based on economic constraints.
+
+2. **TEE/PKP Network Selection**: Development networks (e.g., Lit Protocol's `datil-test`) are suitable for testing but SHOULD NOT be used for production. Production deployments SHOULD use mainnet TEE networks with proper capacity provisioning.
+
+3. **Contract Verification**: Deployed contracts SHOULD be verified on block explorers to enable public audit of the implementation.
+
+4. **Key Security**: Production executor keys MUST be held in production-grade secure environments. Development keys SHOULD be rotated before mainnet deployment.
+
+### Recommended Deployment Sequence
+
+1. Deploy and test on testnet (e.g., Base Sepolia)
+2. Conduct security review of contract and executor key management
+3. Provision production TEE/PKP infrastructure
+4. Deploy to mainnet with verified contracts
+5. Establish self-ownership with production executor keys
+6. Begin state anchoring with appropriate frequency
 
 ## Copyright
 
