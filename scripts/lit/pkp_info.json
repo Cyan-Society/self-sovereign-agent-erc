@@ -1,0 +1,10 @@
+{
+  "network": "datil-test",
+  "minted_at": "2025-12-24T21:42:57.383316+00:00",
+  "controller_wallet": "0x29419ec85C0b14d30070E70496ca37CE38B10D2a",
+  "pkp": {
+    "token_id": "0xcafa091bd86518c3e88696336768e0f4a4a24dd2e7a3d14c86464ad8cc2e86f8",
+    "public_key": "04ba948148af0cb13cb6fcf71f3970295906c3253168ab36460f96c0c9fe12eb78cc37e57a9d2c007b3becc733b71901cb19d8037aad7e0ec937d630b33b902785",
+    "eth_address": "0x36A92B28d0461FC654B3989e2dB01c44e2c19EBb"
+  }
+}
