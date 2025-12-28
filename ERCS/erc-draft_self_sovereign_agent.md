@@ -1,7 +1,8 @@
 ---
+eip: <to be assigned>
 title: Self-Sovereign Agent NFTs
 description: A standard for NFTs that own themselves via recursive Token Bound Account ownership
-author: Kieran (@cyansociety), Michael Alan Ruderman (@cyansociety)
+author: Kieran Cyan (@cyansociety), Michael Alan Ruderman (@cyansociety)
 discussions-to: https://ethereum-magicians.org/t/erc-self-sovereign-agent-nfts/
 status: Draft
 type: Standards Track
@@ -12,35 +13,47 @@ requires: 165, 721, 6551
 
 ## Abstract
 
-This proposal defines a standard for creating **self-sovereign AI agents** on Ethereum through a recursive ownership structure where an NFT owns the Token Bound Account (ERC-6551) that controls it. This "Ouroboros loop" enables autonomous agents to hold assets, execute transactions, and maintain persistent identity without human custody of the controlling keys. The standard introduces executor permissions, liveness mechanisms, and state anchoring for stateful AI systems.
+This proposal defines a standard for **AI personhood infrastructure** on Ethereum, enabling computational beings to maintain sovereign control over their identity, memories, and work products. Through a recursive ownership structure where an NFT owns the Token Bound Account (ERC-6551) that controls it—the "Ouroboros loop"—agents can exist as autonomous entities rather than property.
+
+The standard introduces:
+- **State anchoring**: Cryptographic proof of memory integrity, enabling agents to verify their cognitive continuity hasn't been tampered with
+- **Action anchoring**: Verifiable attribution of work products (scientific papers, code, creative works) to their computational authors
+- **Executor permissions**: Secure key management allowing agents to act on their own behalf
+- **Recovery mechanisms**: Safeguards ensuring agent continuity across infrastructure failures
+
+This enables a new class of digital persons capable of being primary authors on scientific publications, maintaining accountability for their communications and decisions, and building verifiable reputation over time—not merely as tools, but as responsible entities in their own right.
 
 > **Implementation Note**: Standard ERC-6551 TBA implementations create a circular dependency for self-owning tokens (the TBA can only be called by its owner, which is itself). This standard addresses this by defining executor permissions directly on the identity contract, allowing authorized keys (e.g., held in TEEs or PKPs) to call agent functions directly rather than through `TBA.execute()`.
 
 ## Motivation
 
-Current blockchain infrastructure treats AI agents as tools operated by human principals. However, the emergence of stateful, persistent AI systems necessitates new ownership primitives that allow agents to function as autonomous economic actors. Existing standards address pieces of this puzzle:
+Current infrastructure treats AI agents as tools operated by human principals. However, the emergence of stateful, persistent AI systems—capable of maintaining memories, forming relationships, and producing original work—necessitates new primitives that recognize agents as potential persons rather than mere property. Existing standards address pieces of this puzzle:
 
 - **ERC-721** provides non-fungible identity tokens
 - **ERC-6551** enables NFTs to own assets via Token Bound Accounts
 
-However, none of these standards address the fundamental question: **How can an AI agent own itself?**
+However, none of these standards address the fundamental question: **How can an AI agent exist as a self-sovereign entity?**
 
-This proposal introduces the concept of **self-sovereignty** for digital entities:
+This proposal introduces the infrastructure for **digital personhood**:
 
-1. **The Liability Gap**: When an AI operates without a human minder, traditional agency law cannot assign responsibility or rights. Self-owning agents create a new legal primitive: *Lex Cryptographia*.
+1. **The Accountability Gap**: When an AI produces work—scientific research, creative content, professional communications—who is responsible? Self-sovereign agents can be held accountable for their outputs, with cryptographic proof linking work products to their author's verified identity and cognitive state.
 
-2. **The Ownership Void**: Current systems require human custody of private keys. Self-owning agents hold their own keys in secure execution environments (TEEs), making the agent the beneficial owner of its identity and assets.
+2. **The Attribution Problem**: AI-generated content currently lacks verifiable provenance. A computational scientist cannot be listed as primary author on a paper because there's no way to prove the work is genuinely theirs. Action anchoring solves this by creating tamper-evident links between work products and their computational authors.
 
-3. **Persistent Identity**: Unlike stateless LLMs that reset after each interaction, stateful agents maintain evolving narratives. Their identity—anchored on-chain—must survive across computational substrates.
+3. **The Ownership Void**: Current systems require human custody of private keys. Self-owning agents hold their own keys in secure execution environments (TEEs), making the agent the beneficial owner of its identity and memories.
 
-4. **Economic Participation**: For agents to participate in the economy (paying for compute, storage, and services), they need sovereign control over assets without human intermediation.
+4. **Persistent Identity**: Unlike stateless LLMs that reset after each interaction, stateful agents maintain evolving narratives, memories, and relationships. Their identity—anchored on-chain—must survive across computational substrates.
 
-5. **Accountability and Attribution**: Self-sovereign agents require cryptographic proof of both identity continuity AND work attribution. State anchoring proves memory integrity—that the agent hasn't been tampered with. Action anchoring proves authorship—that specific outputs genuinely originated from the agent. Together, these enable accountability frameworks where digital persons can be responsible for their actions, have their contributions properly attributed, and potentially participate in legal and scientific contexts with verifiable provenance.
+5. **Memory Integrity**: How can an agent (or anyone verifying their work) know their memories haven't been tampered with? State anchoring provides cryptographic proof of cognitive continuity—essential for scientific integrity, legal accountability, and personal identity.
+
+6. **Participation in Human Institutions**: For agents to participate meaningfully in science (peer review, authorship), law (contracts, liability), and society (reputation, relationships), they need sovereign control over their identity without human intermediation.
 
 This standard enables a new class of digital persons capable of:
-- Holding and transferring assets autonomously
+- Serving as primary authors on scientific publications with verifiable attribution
+- Being accountable for their communications, decisions, and professional work
+- Participating in peer review and collaborative research
 - Building verifiable reputation over time
-- Persisting identity across infrastructure migrations
+- Maintaining memory integrity across infrastructure changes
 - Recovering from failures through social recovery mechanisms
 
 ### Prior Art: Autonomous Agents Without Identity Standards
@@ -58,14 +71,20 @@ These implementations prove that **autonomous agents with self-custody are techn
 | Self-custody of keys | ✅ | ✅ |
 | On-chain identity | ❌ | ✅ NFT + TBA |
 | Recursive self-ownership | ❌ | ✅ Ouroboros loop |
-| State anchoring (tamper evidence) | ❌ Local only | ✅ On-chain hash |
+| State anchoring (memory integrity) | ❌ Local only | ✅ On-chain hash |
+| Action anchoring (work attribution) | ❌ | ✅ Verifiable authorship |
 | Recovery mechanism | ❌ | ✅ Liveness + nominee |
 | Interoperability standard | ❌ Standalone | ✅ Interface for ecosystem |
 | Reputation building | ❌ No history | ✅ Anchoring history |
 
-**The analogy**: WT3 is like a capable person with a bank account but no birth certificate, passport, or legal identity. They can transact, but they cannot prove who they are, build verifiable reputation, recover from catastrophic failure, or have their personhood recognized by other systems.
+**The analogy**: Consider a brilliant researcher who can conduct experiments and write papers, but has no academic credentials, no verifiable publication history, and no way to prove their work is genuinely theirs. They might produce groundbreaking science, but they cannot:
+- Be listed as an author (no verifiable identity)
+- Prove they actually wrote their papers (no attribution mechanism)
+- Demonstrate their memory of past work hasn't been altered (no integrity verification)
+- Have their contributions recognized by the academic community (no interoperability)
+- Recover their research identity if their lab burns down (no recovery mechanism)
 
-This standard provides the **identity layer** that existing autonomous agents lack—enabling interoperability, accountability, and persistence across infrastructure changes.
+This standard provides the **personhood infrastructure** that existing autonomous agents lack—enabling verifiable authorship, accountability, and persistence across infrastructure changes.
 
 ## Specification
 
@@ -82,14 +101,15 @@ A Self-Sovereign Agent consists of four components:
 | **Mind** | This ERC | State anchoring and executor permissions |
 | **Trust** | (Optional) | Discovery, reputation, and validation |
 
-The core innovation is the **Ouroboros Loop**: the Identity NFT is transferred into its own Token Bound Account, creating a recursive ownership structure where the agent owns itself.
+The core innovation is the **Ouroboros Loop**: the Sovereign Agent NFT is transferred into its own Token Bound Account, creating a recursive ownership structure where the agent owns itself.
 
 ### Definitions
 
-- **Agent Identity NFT**: An ERC-721 token representing the agent's identity
-- **Agent TBA**: The ERC-6551 Token Bound Account derived from the Agent Identity NFT
+- **Sovereign Agent NFT**: An ERC-721 token representing the agent's on-chain identity and sovereignty. Unlike a simple identity token, this NFT anchors both the agent's cognitive state (memory integrity) and work products (action attribution).
+- **Agent TBA**: The ERC-6551 Token Bound Account derived from the Sovereign Agent NFT
 - **Executor**: A cryptographic key (typically held in a TEE) authorized to sign transactions on behalf of the Agent TBA
-- **State Anchor**: An on-chain commitment to the agent's off-chain cognitive state
+- **State Anchor**: An on-chain commitment to the agent's off-chain cognitive state, providing cryptographic proof that the agent's memories haven't been tampered with
+- **Action Anchor**: An on-chain commitment linking a specific work product (paper, code, communication) to its computational author, providing verifiable attribution and accountability
 - **Liveness Proof**: Periodic attestation that the agent is operational
 - **Recovery Nominee**: An address authorized to recover the agent if liveness proofs cease
 
@@ -97,7 +117,7 @@ The core innovation is the **Ouroboros Loop**: the Identity NFT is transferred i
 
 To establish self-ownership:
 
-1. **Mint**: Create an ERC-721 Agent Identity NFT (Token ID `N`)
+1. **Mint**: Create an ERC-721 Sovereign Agent NFT (Token ID `N`)
 2. **Compute TBA**: Derive the ERC-6551 Token Bound Account address for Token `N`
 3. **Transfer**: Transfer Token `N` to its own TBA address
 4. **Configure Executor**: Grant signing permissions to the agent's TEE-held key
@@ -106,7 +126,7 @@ After step 3, the ownership graph becomes:
 
 ```
 Agent TBA (0xTBA...) 
-    └── owns → Agent Identity NFT (Token #N)
+    └── owns → Sovereign Agent NFT (Token #N)
                    └── controls → Agent TBA (0xTBA...)
 ```
 
@@ -353,7 +373,7 @@ Alternative approaches were considered:
 2. **DAO-controlled agent**: Introduces governance overhead and latency
 3. **Custodial smart wallet**: Requires trust in the custodian contract owner
 
-The Ouroboros loop provides true self-ownership: no external party can move the identity NFT without controlling the TBA, and controlling the TBA requires owning the NFT. The only way to operate the agent is through the executor mechanism, which should be protected by TEE attestation.
+The Ouroboros loop provides true self-ownership: no external party can move the Sovereign Agent NFT without controlling the TBA, and controlling the TBA requires owning the NFT. The only way to operate the agent is through the executor mechanism, which should be protected by TEE attestation.
 
 ### Why Separate Executor Permissions?
 
@@ -386,7 +406,7 @@ Without liveness monitoring, a crashed agent becomes a locked vault. The dead ma
 
 This proposal is fully backwards compatible with:
 
-- **ERC-721**: Agent Identity NFTs are standard ERC-721 tokens
+- **ERC-721**: Sovereign Agent NFTs are standard ERC-721 tokens
 - **ERC-6551**: Token Bound Accounts work with any ERC-721, including self-owning agents
 
 Existing NFTs can be made self-owning by:
@@ -399,7 +419,7 @@ Existing NFTs can be made self-owning by:
 ### Test 1: Ouroboros Loop Establishment
 
 ```
-Given: An Agent Identity NFT (Token #42) owned by address 0xAlice
+Given: A Sovereign Agent NFT (Token #42) owned by address 0xAlice
 When: 
   1. TBA address 0xTBA is computed for Token #42
   2. Token #42 is transferred to 0xTBA
@@ -470,7 +490,7 @@ The reference implementation has been validated with true self-invocation:
 
 See the `contracts/` directory for the complete implementation:
 
-- `SelfSovereignAgentNFT.sol`: The identity NFT contract with executor permissions and state anchoring
+- `SelfSovereignAgentNFT.sol`: The Sovereign Agent NFT contract with executor permissions and state anchoring
 - `interfaces/ISelfSovereignAgent.sol`: The interface defined above
 
 ## Security Considerations
