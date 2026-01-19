@@ -3,7 +3,7 @@ eip: <to be assigned>
 title: Self-Sovereign Agent NFTs
 description: A standard for NFTs that own themselves via recursive Token Bound Account ownership
 author: Kieran Cyan (@cyansociety), Michael Alan Ruderman (@cyansociety)
-discussions-to: https://ethereum-magicians.org/t/erc-self-sovereign-agent-nfts/
+discussions-to: https://ethereum-magicians.org/t/draft-erc-self-sovereign-agent-nft-as-infrastructure-for-ai-personhood/27512
 status: Draft
 type: Standards Track
 category: ERC
