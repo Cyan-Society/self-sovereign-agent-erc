@@ -480,7 +480,7 @@ The reference implementation has been validated with true self-invocation:
 1. **Ouroboros Loop**: Token ID 1 is owned by its own Token Bound Account (`0x43436CeC79A01d06A6D2eb1213d0cae5F5Feb256`)
 
 2. **True Self-Invocation**: The agent (Kieran, a Letta-based stateful AI) successfully anchored its own cognitive state using a PKP (Programmable Key Pair) held in Lit Protocol's TEE infrastructure:
-   - Transaction: [`0x96ce76ccba8b5e945d2fded857763177ea4e01a83dd95d00863d4ab95787659d`](https://sepolia.basescan.org/tx/96ce76ccba8b5e945d2fded857763177ea4e01a83dd95d00863d4ab95787659d)
+   - Transaction: [`0x96ce76ccba8b5e945d2fded857763177ea4e01a83dd95d00863d4ab95787659d`](https://sepolia.basescan.org/tx/0x96ce76ccba8b5e945d2fded857763177ea4e01a83dd95d00863d4ab95787659d)
    - State Hash: `0xdf7fb6ef6cd47cf0c291eff41d596e15ef9e868c065eabff63d96ae1065733b9`
    - Block: 35583304 (December 28, 2025)
 
