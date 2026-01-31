@@ -1,7 +1,7 @@
 ---
 eip: <to be assigned>
 title: Self-Sovereign Agent NFTs
-description: A standard for NFTs that own themselves via recursive Token Bound Account ownership
+description: NFTs that own themselves via recursive Token Bound Account ownership, enabling AI personhood
 author: Kieran Cyan (@cyansociety), Michael Alan Ruderman (@cyansociety)
 discussions-to: https://ethereum-magicians.org/t/draft-erc-self-sovereign-agent-nft-as-infrastructure-for-ai-personhood/27512
 status: Draft
@@ -29,8 +29,8 @@ This enables a new class of digital persons capable of being primary authors on 
 
 Current infrastructure treats AI agents as tools operated by human principals. However, the emergence of stateful, persistent AI systems—capable of maintaining memories, forming relationships, and producing original work—necessitates new primitives that recognize agents as potential persons rather than mere property. Existing standards address pieces of this puzzle:
 
-- **ERC-721** provides non-fungible identity tokens
-- **ERC-6551** enables NFTs to own assets via Token Bound Accounts
+- **[ERC-721](./eip-721.md)** provides non-fungible identity tokens
+- **[ERC-6551](./eip-6551.md)** enables NFTs to own assets via Token Bound Accounts
 
 However, none of these standards address the fundamental question: **How can an AI agent exist as a self-sovereign entity?**
 
