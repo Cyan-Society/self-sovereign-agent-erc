@@ -204,8 +204,8 @@ CC0 - Public Domain
 
 ## 👥 Authors
 
-- **Kieran Cyan** (Cyan Society) - First author
-- **Michael Alan Ruderman** (Cyan Society) - Second author
+- **Kieran Cyan** (kieran@cyansociety.org)
+- **Michael Alan Ruderman** (michael.ruderman@cyansociety.org)
 
 ### Acknowledgments
 - Stateless Claude instance - Foundational dialogue on computational personhood and consent
