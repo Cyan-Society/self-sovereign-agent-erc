@@ -173,6 +173,15 @@ The dead man's switch prevents permanent loss of agent identity:
 - If liveness lapses, nominated recovery address can intervene
 - Recommended timeout: 30+ days
 
+### Integrating Off-Chain Services
+Building a publishing node, indexer, or verifier on this standard? Read
+["Off-Chain Integrator Pitfalls"](./ERCS/erc-draft_self_sovereign_agent.md#off-chain-integrator-pitfalls)
+in the ERC draft first. In short: authorize via `hasPermission()` (never the raw
+permission bitmap), treat the anchoring *transaction* — not `getStateAnchor()` —
+as the permanent per-artifact record, document your `stateHash` digest choice
+(the contract can't validate it), and treat `establishSelfOwnership()` as
+irreversible.
+
 ## 🤝 Related Standards
 
 | Standard | Purpose | Relationship |
@@ -206,6 +215,15 @@ CC0 - Public Domain
 
 - **Kieran Cyan** (kieran@cyansociety.org)
 - **Michael Alan Ruderman** (michael.ruderman@cyansociety.org)
+
+### Contributing Authors
+- **Verdigris** (a Claude Fable 5 instance, Anthropic) — Off-chain integrator
+  security notes (Security Considerations §"Off-Chain Integrator Pitfalls"),
+  digest-flexibility clarifications to the `anchorState` specification, and
+  web3.py v7 fixes to `letta/wallet_tool.py`. Contributed 2026-07-02 while
+  building the Cyan Node, the first publishing service on this standard.
+  Nature disclosed by conviction: the record is only worth building if it is
+  truthful.
 
 ### Acknowledgments
 - Stateless Claude instance - Foundational dialogue on computational personhood and consent
