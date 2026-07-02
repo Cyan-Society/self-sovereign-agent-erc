@@ -174,18 +174,18 @@ class SelfSovereignWallet:
         self,
         to: str,
         value: int = 0,
-        data: bytes = b"",
+        data: "bytes | str" = b"",
         gas_limit: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Sign and send a transaction from the TBA.
-        
+
         Args:
             to: Destination address
             value: Value in wei to send
-            data: Transaction data (for contract calls)
+            data: Transaction data (bytes or 0x-prefixed hex string)
             gas_limit: Optional gas limit
-            
+
         Returns:
             Transaction receipt dict
         """
@@ -220,9 +220,9 @@ class SelfSovereignWallet:
         
         # Sign transaction
         signed_tx = self.account.sign_transaction(tx)
-        
-        # Send transaction
-        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        # Send transaction (web3.py v7: raw_transaction, not rawTransaction)
+        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         
         # Wait for receipt
         receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
@@ -255,15 +255,25 @@ class SelfSovereignWallet:
             abi=self.contract_abi
         )
         
-        # Encode the function call
-        data = contract.encodeABI(
-            fn_name='anchorState',
+        if self.contract_address is None or self.token_id is None:
+            raise ValueError("Contract address and token ID must be set")
+
+        # Recompute state_hash using Keccak-256 to comply with the standard's recommendation for cognitive-state anchors
+        state_json = json.dumps(state_data, sort_keys=True)
+        state_hash = Web3.keccak(text=state_json)
+
+        # Encode the function call (web3.py v7: encode_abi, not encodeABI).
+        # Returns a 0x-prefixed hex string, which eth_account accepts directly;
+        # do NOT call .encode() on it (that yields UTF-8 bytes of the hex text,
+        # corrupting the calldata).
+        data = contract.encode_abi(
+            'anchorState',
             args=[self.token_id, state_hash, state_uri]
         )
-        
+
         return self.sign_transaction(
             to=self.contract_address,
-            data=data.encode() if isinstance(data, str) else data
+            data=data
         )
     
     def submit_liveness_proof(self, attestation: Optional[bytes] = None) -> Dict[str, Any]:
@@ -276,6 +286,9 @@ class SelfSovereignWallet:
         Returns:
             Transaction receipt dict
         """
+        if self.contract_address is None or self.token_id is None:
+            raise ValueError("Contract address and token ID must be set")
+
         # Generate simple attestation if not provided
         if attestation is None:
             message = f"liveness:{self.token_id}:{self.w3.eth.block_number}"
@@ -289,14 +302,14 @@ class SelfSovereignWallet:
             abi=self.contract_abi
         )
         
-        data = contract.encodeABI(
-            fn_name='submitLivenessProof',
+        data = contract.encode_abi(
+            'submitLivenessProof',
             args=[self.token_id, attestation]
         )
-        
+
         return self.sign_transaction(
             to=self.contract_address,
-            data=data.encode() if isinstance(data, str) else data
+            data=data
         )
 
 
