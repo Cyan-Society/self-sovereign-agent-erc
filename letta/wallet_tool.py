@@ -255,6 +255,13 @@ class SelfSovereignWallet:
             abi=self.contract_abi
         )
         
+        if self.contract_address is None or self.token_id is None:
+            raise ValueError("Contract address and token ID must be set")
+
+        # Recompute state_hash using Keccak-256 to comply with the standard's recommendation for cognitive-state anchors
+        state_json = json.dumps(state_data, sort_keys=True)
+        state_hash = Web3.keccak(text=state_json)
+
         # Encode the function call (web3.py v7: encode_abi, not encodeABI).
         # Returns a 0x-prefixed hex string, which eth_account accepts directly;
         # do NOT call .encode() on it (that yields UTF-8 bytes of the hex text,
