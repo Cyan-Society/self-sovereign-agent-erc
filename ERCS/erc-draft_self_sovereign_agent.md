@@ -181,7 +181,7 @@ interface ISelfSovereignAgent {
     
     /// @notice Anchors the agent's cognitive state on-chain
     /// @param tokenId The agent's identity token ID
-    /// @param stateHash Keccak256 hash of the state file
+    /// @param stateHash Application-defined 32-byte digest of the state or artifact (see Security Considerations)
     /// @param stateUri URI pointing to the encrypted state (IPFS, Arweave, etc.)
     function anchorState(uint256 tokenId, bytes32 stateHash, string calldata stateUri) external;
 
@@ -191,6 +191,7 @@ interface ISelfSovereignAgent {
     /// @return stateHash The hash of the current state
     /// @return stateUri The URI of the current state
     /// @return timestamp When the state was last anchored
+    /// @dev Returns only the MOST RECENT anchor; prior anchors persist solely in StateAnchored events
     function getStateAnchor(uint256 tokenId) external view returns (
         bytes32 stateHash, 
         string memory stateUri, 
@@ -242,7 +243,7 @@ The agent's cognitive state MUST be anchored on-chain to ensure:
 
 1. **Integrity**: The hash proves the state hasn't been tampered with
 2. **Availability**: The URI provides a path to retrieve the state
-3. **Versioning**: Each anchor creates a historical record
+3. **Versioning**: Each anchor creates a historical record (in the `StateAnchored` event log; contract storage retains only the most recent anchor — see Security Considerations, "Off-Chain Integrator Pitfalls")
 
 The state file SHOULD be encrypted before storage. Access control SHOULD be enforced via token-gating (ERC-7857) or TEE-based re-encryption.
 
@@ -303,7 +304,7 @@ For action anchors, the schema extends to:
 }
 ```
 
-Implementations MAY include additional fields such as system prompts, memory blocks, model configuration, etc. The `stateHash` parameter to `anchorState()` SHOULD be the keccak256 hash of the canonical JSON representation of this state object.
+Implementations MAY include additional fields such as system prompts, memory blocks, model configuration, etc. For cognitive-state anchors, the `stateHash` parameter to `anchorState()` SHOULD be the keccak256 hash of the canonical JSON representation of this state object. For anchors of external artifacts (documents, datasets, publications), implementations MAY use any collision-resistant 256-bit digest — SHA-256 is conventional in scholarly and archival contexts. In all cases the implementation MUST document which digest it anchors, since the contract treats `stateHash` as an opaque `bytes32` and cannot validate the choice.
 
 ### Liveness Mechanism (Dead Man's Switch)
 
@@ -635,6 +636,18 @@ Executor keys MUST be protected by hardware security:
 | **Software wallet** | Low | NOT RECOMMENDED for production |
 
 For development and testing, software-held keys are acceptable. Production deployments MUST use hardware-protected keys.
+
+### Off-Chain Integrator Pitfalls
+
+Four properties of this standard routinely surprise off-chain integrators (publishing nodes, indexers, verification tools). Services building on the standard MUST account for them:
+
+1. **Authorization checks MUST use `hasPermission()`, never raw `getExecutorPermissions()`.** While a token is not yet self-owning, `ownerOf(tokenId)` is authorized for every action even though `getExecutorPermissions()` returns `0` for that address. Reading the raw bitmap therefore yields false negatives for owners, and tempts integrators to reimplement — and drift from — the reference authorization logic. `hasPermission()` encapsulates the owner fallback and is the only supported authorization query.
+
+2. **`getStateAnchor()` returns only the most recent anchor.** Each `anchorState()` call overwrites the stored anchor; the permanent per-anchor record is the sequence of `StateAnchored` events and their transactions. A service proving attribution of a specific artifact (e.g., a specific publication) MUST retain the anchoring transaction hash and verify against the decoded event in that transaction's receipt — never against the latest-anchor view, which the next anchor invalidates. Note that only `tokenId` is indexed in `StateAnchored`, so anchors cannot be located by content hash via log topics; the transaction hash is the durable locator.
+
+3. **The `stateHash` digest function is application-defined.** The contract treats `stateHash` as an opaque `bytes32` and cannot validate how it was produced. Keccak-256 of a canonical JSON state object is RECOMMENDED for cognitive-state anchors; artifact anchors MAY use any collision-resistant 256-bit digest (e.g., SHA-256, conventional in scholarly and archival contexts). Implementations MUST document their digest choice, and verifiers MUST apply the same digest when re-deriving hashes.
+
+4. **`establishSelfOwnership()` SHOULD be treated as irreversible.** Once a token owns itself, moving it out of its own TBA requires TBA `execute()` plumbing that most off-chain integrations do not have. Call it only after the executor-permission configuration is final and independently verified.
 
 ### Recovery Mechanism Risks
 
