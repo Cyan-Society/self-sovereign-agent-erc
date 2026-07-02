@@ -286,6 +286,9 @@ class SelfSovereignWallet:
         Returns:
             Transaction receipt dict
         """
+        if self.contract_address is None or self.token_id is None:
+            raise ValueError("Contract address and token ID must be set")
+
         # Generate simple attestation if not provided
         if attestation is None:
             message = f"liveness:{self.token_id}:{self.w3.eth.block_number}"
