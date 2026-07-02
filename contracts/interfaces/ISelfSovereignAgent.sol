@@ -147,9 +147,9 @@ interface ISelfSovereignAgent {
     
     /// @notice Anchors the agent's cognitive state on-chain
     /// @param tokenId The agent's identity token ID
-    /// @param stateHash Keccak256 hash of the state file
+    /// @param stateHash Application-defined 32-byte digest of the state or artifact (e.g., keccak256 or SHA-256; see ERC Security Considerations)
     /// @param stateUri URI pointing to the encrypted state
-    /// @dev Only callable by executors with ANCHOR_STATE permission
+    /// @dev Only callable by executors with ANCHOR_STATE permission. Overwrites the stored anchor; prior anchors persist only in StateAnchored events.
     function anchorState(uint256 tokenId, bytes32 stateHash, string calldata stateUri) external;
     
     /// @notice Submits a liveness proof (heartbeat)
