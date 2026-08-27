@@ -71,7 +71,7 @@ async def test_auth():
             "token_id": 2,
             "state_hash": "0x" + "ab" * 32,
             "state_uri": "test://auth-test",
-            "api_key": "wrong-key-12345"
+            "api_key": "invalid-api-key"
         })
         if result.is_error:
             print(f"   ✅ Correctly rejected (error in response): {result.content}")

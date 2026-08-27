@@ -1,0 +1,19 @@
+name: Secret scan
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan working tree
+        run: >-
+          docker run --rm --volume "$GITHUB_WORKSPACE:/repo:ro" --workdir /repo
+          zricethezav/gitleaks:v8.18.4 detect --no-git -v

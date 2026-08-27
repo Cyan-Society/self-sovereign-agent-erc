@@ -11,7 +11,7 @@ This guide documents how to connect to our self-hosted Letta server through a Pi
 **Base URL**: `https://cyansociety.a.pinggy.link`
 
 **Authentication**: Password-based (not API key)
-- Password: `REDACTED_ROTATED_SECRET`
+- Password: `<YOUR_LETTA_PASSWORD>`
 
 ---
 
@@ -21,12 +21,12 @@ Both methods work interchangeably:
 
 ### Method 1: Bearer Token (Recommended)
 ```bash
--H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+-H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 ### Method 2: X-BARE-PASSWORD Header
 ```bash
--H "X-BARE-PASSWORD: REDACTED_ROTATED_SECRET"
+-H "X-BARE-PASSWORD: <YOUR_LETTA_PASSWORD>"
 ```
 
 ---
@@ -40,25 +40,25 @@ Both methods work interchangeably:
 **Health Check**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/health/" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 **List All Agents**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/agents/" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 **Get Specific Agent**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/agents/{agent-id}" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 **List Agent Messages**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/agents/{agent-id}/messages" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 ---
@@ -104,7 +104,7 @@ sudo journalctl -u pinggy-tunnel -f
 - Include the trailing slash: `/v1/health/` not `/v1/health`
 
 **"Unauthorized" or 401 Errors**
-- Verify password matches: `REDACTED_ROTATED_SECRET`
+- Verify password matches: `<YOUR_LETTA_PASSWORD>`
 - Check Authorization header format: `Bearer <password>`
 - Alternative: Try X-BARE-PASSWORD header
 
@@ -123,7 +123,7 @@ ssh root@157.180.34.8
 
 # Test local endpoint
 sudo docker exec $(docker ps -q --filter name=letta) \
-  curl -s -H "Authorization: Bearer REDACTED_ROTATED_SECRET" \
+  curl -s -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>" \
   http://localhost:8283/v1/health/
 ```
 
@@ -135,7 +135,7 @@ When using Letta client libraries, set:
 
 ```bash
 export LETTA_BASE_URL="https://cyansociety.a.pinggy.link"
-export LETTA_API_KEY="REDACTED_ROTATED_SECRET"
+export LETTA_API_KEY="<YOUR_LETTA_PASSWORD>"
 ```
 
 ---

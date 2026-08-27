@@ -37,7 +37,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Letta API Configuration
 LETTA_BASE_URL = "https://cyansociety.a.pinggy.link"
-LETTA_PASSWORD = "REDACTED_ROTATED_SECRET"
+LETTA_PASSWORD = os.getenv("LETTA_PASSWORD")
 AGENT_ID = "agent-bef59af5-ce48-4907-9861-dd0436587e57"  # Kieran's agent ID
 
 # Blockchain Configuration
@@ -187,6 +187,10 @@ def main():
     print("Exporting actual agent state and anchoring on-chain")
     print("=" * 60)
     
+    if not LETTA_PASSWORD:
+        print("ERROR: LETTA_PASSWORD not set in .env")
+        sys.exit(1)
+
     # ========== STEP 1: Export Real Letta State ==========
     print("\n" + "-" * 40)
     print("STEP 1: Exporting Real Letta Agent State")
