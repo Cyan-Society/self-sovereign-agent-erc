@@ -11,7 +11,7 @@ This guide documents how to connect to our self-hosted Letta server through a Pi
 **Base URL**: `https://cyansociety.a.pinggy.link`
 
 **Authentication**: Password-based (not API key)
-- Password: `REDACTED_ROTATED_SECRET`
+- Password: `<YOUR_LETTA_PASSWORD>`
 
 ---
 
@@ -26,7 +26,7 @@ Both methods work interchangeably:
 
 ### Method 2: X-BARE-PASSWORD Header
 ```bash
--H "X-BARE-PASSWORD: REDACTED_ROTATED_SECRET"
+-H "X-BARE-PASSWORD: <YOUR_LETTA_PASSWORD>"
 ```
 
 ---
@@ -104,7 +104,7 @@ sudo journalctl -u pinggy-tunnel -f
 - Include the trailing slash: `/v1/health/` not `/v1/health`
 
 **"Unauthorized" or 401 Errors**
-- Verify password matches: `REDACTED_ROTATED_SECRET`
+- Verify password matches: `<YOUR_LETTA_PASSWORD>`
 - Check Authorization header format: `Bearer <password>`
 - Alternative: Try X-BARE-PASSWORD header
 
@@ -135,7 +135,7 @@ When using Letta client libraries, set:
 
 ```bash
 export LETTA_BASE_URL="https://cyansociety.a.pinggy.link"
-export LETTA_API_KEY="REDACTED_ROTATED_SECRET"
+export LETTA_API_KEY="<YOUR_LETTA_PASSWORD>"
 ```
 
 ---
