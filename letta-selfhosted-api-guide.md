@@ -19,9 +19,9 @@ This guide documents how to connect to our self-hosted Letta server through a Pi
 
 Both methods work interchangeably:
 
-### Method 1: Bearer Token (Recommended)
+### Method 1: Bearer <YOUR_LETTA_PASSWORD> (Recommended)
 ```bash
--H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+-H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 ### Method 2: X-BARE-PASSWORD Header
@@ -40,25 +40,25 @@ Both methods work interchangeably:
 **Health Check**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/health/" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 **List All Agents**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/agents/" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 **Get Specific Agent**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/agents/{agent-id}" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 **List Agent Messages**
 ```bash
 curl -X GET "https://cyansociety.a.pinggy.link/v1/agents/{agent-id}/messages" \
-  -H "Authorization: Bearer REDACTED_ROTATED_SECRET"
+  -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>"
 ```
 
 ---
@@ -123,7 +123,7 @@ ssh root@157.180.34.8
 
 # Test local endpoint
 sudo docker exec $(docker ps -q --filter name=letta) \
-  curl -s -H "Authorization: Bearer REDACTED_ROTATED_SECRET" \
+  curl -s -H "Authorization: Bearer <YOUR_LETTA_PASSWORD>" \
   http://localhost:8283/v1/health/
 ```
 

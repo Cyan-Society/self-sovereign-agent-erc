@@ -31,12 +31,14 @@ def anchor_my_state(token_id: int = 1) -> str:
     
     # Configuration - these must be set as environment variables on the Letta server
     LETTA_BASE_URL = "https://cyansociety.a.pinggy.link"
-    LETTA_PASSWORD = os.getenv("LETTA_PASSWORD", "REDACTED_ROTATED_SECRET")
+    LETTA_PASSWORD = os.getenv("LETTA_PASSWORD")
     RPC_URL = "https://sepolia.base.org"
     CONTRACT_ADDRESS = os.getenv("AGENT_CONTRACT_ADDRESS", "0x9fe33F0a1159395FBE93d16D695e7330831C8CfF")
     EXECUTOR_KEY = os.getenv("AGENT_EXECUTOR_PRIVATE_KEY")
     AGENT_ID = "agent-bef59af5-ce48-4907-9861-dd0436587e57"  # Kieran's ID
     
+    if not LETTA_PASSWORD:
+        return "ERROR: LETTA_PASSWORD not set on server"
     if not EXECUTOR_KEY:
         return "ERROR: AGENT_EXECUTOR_PRIVATE_KEY not set on server"
     

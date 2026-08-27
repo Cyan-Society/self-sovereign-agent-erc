@@ -54,7 +54,7 @@ def anchor_my_state(
     
     # Configuration
     LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "https://cyansociety.a.pinggy.link")
-    LETTA_PASSWORD = os.getenv("LETTA_PASSWORD", "")
+    LETTA_PASSWORD = os.getenv("LETTA_PASSWORD")
     RPC_URL = os.getenv("BASE_SEPOLIA_RPC", "https://sepolia.base.org")
     CONTRACT_ADDRESS = os.getenv("AGENT_CONTRACT_ADDRESS")
     EXECUTOR_KEY = os.getenv("AGENT_EXECUTOR_PRIVATE_KEY")
@@ -64,6 +64,8 @@ def anchor_my_state(
         return "ERROR: AGENT_CONTRACT_ADDRESS environment variable not set"
     if not EXECUTOR_KEY:
         return "ERROR: AGENT_EXECUTOR_PRIVATE_KEY environment variable not set"
+    if not LETTA_PASSWORD:
+        return "ERROR: LETTA_PASSWORD environment variable not set"
     
     # Contract ABI (minimal)
     CONTRACT_ABI = [

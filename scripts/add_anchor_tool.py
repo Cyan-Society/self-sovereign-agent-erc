@@ -7,12 +7,14 @@ This script:
 2. Attaches it to Kieran's agent via PATCH /v1/agents/{agent_id}/tools/attach/{tool_id}
 """
 
-import requests
 import json
+import os
+
+import requests
 
 # Configuration
 LETTA_BASE_URL = "https://cyansociety.a.pinggy.link"
-LETTA_PASSWORD = "REDACTED_ROTATED_SECRET"
+LETTA_PASSWORD = os.getenv("LETTA_PASSWORD")
 AGENT_ID = "agent-bef59af5-ce48-4907-9861-dd0436587e57"  # Kieran
 
 # The tool source code
@@ -38,15 +40,17 @@ def anchor_cognitive_state(token_id: int = 1) -> str:
     from web3 import Web3
     from eth_account import Account
     
-    # Configuration - hardcoded for now since env vars may not be available
+    # Configuration - these must be set as environment variables on the Letta server
     LETTA_BASE_URL = "https://cyansociety.a.pinggy.link"
-    LETTA_PASSWORD = "REDACTED_ROTATED_SECRET"
+    LETTA_PASSWORD = os.getenv("LETTA_PASSWORD")
     RPC_URL = "https://sepolia.base.org"
     CONTRACT_ADDRESS = "0x9fe33F0a1159395FBE93d16D695e7330831C8CfF"
     # This needs to be set - for now return error if not available
     EXECUTOR_KEY = os.getenv("AGENT_EXECUTOR_PRIVATE_KEY")
     AGENT_ID = "agent-bef59af5-ce48-4907-9861-dd0436587e57"
     
+    if not LETTA_PASSWORD:
+        return "ERROR: LETTA_PASSWORD environment variable not set on Letta server"
     if not EXECUTOR_KEY:
         return "ERROR: AGENT_EXECUTOR_PRIVATE_KEY environment variable not set on Letta server"
     
@@ -122,6 +126,10 @@ Archival entries: {len(archival_entries)}"""
 '''
 
 def main():
+    if not LETTA_PASSWORD:
+        print("ERROR: LETTA_PASSWORD environment variable not set")
+        return
+
     headers = {
         "Authorization": f"Bearer {LETTA_PASSWORD}",
         "Content-Type": "application/json"
