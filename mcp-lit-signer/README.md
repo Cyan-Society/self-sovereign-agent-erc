@@ -58,25 +58,61 @@ LIT_PKP_ETH_ADDRESS=0x...
 # Auth wallet (for Lit session signatures)
 DEPLOYER_PRIVATE_KEY=0x...
 
+# MCP transport authentication (required)
+MCP_API_KEY=<generate-a-random-bearer-token>
+
 # Optional
 RPC_URL=https://sepolia.base.org
+MCP_HOST=127.0.0.1
 ```
+
+Generate the MCP bearer token with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Do not pass this token as a tool argument. HTTP clients send it in the
+`Authorization: Bearer <token>` header. The server fails to start if
+`MCP_API_KEY` is absent. Configuration is loaded from `.env` beside `server.py`
+first (flat deployments), then from the parent directory (repository layout).
+A process manager may instead inject the variables directly, for example with
+a systemd `EnvironmentFile=` directive.
+
+This static shared token is a transitional protection for the current local
+signer, not client identity or production-grade authorization. It has no
+per-client identity, expiry, or independent policy decision. Replace it with
+the Phase 2 identity-bound broker before treating signer calls as attributable
+to a particular agent.
 
 ## Running the Server
 
-### HTTP Transport (recommended for remote access)
+### HTTP Transport
 
 ```bash
 python server.py http 8001
 ```
 
-The server will be available at `http://localhost:8001/mcp`
+The server defaults to `127.0.0.1` and will be available at
+`http://localhost:8001/mcp`. Keep it on loopback unless an authenticated TLS
+proxy or an equivalent explicitly reviewed network boundary fronts it.
+
+Non-loopback operation is not recommended with this static verifier. During a
+controlled migration only, `MCP_HOST` can override the bind address, but bearer
+authentication, TLS, and source-network firewall restrictions are all required.
+Plain HTTP exposes bearer credentials to anyone able to observe the network
+path, so do not use it across an untrusted network. Replace this mode rather
+than promoting it to a production signer boundary.
 
 ### STDIO Transport (for local integration)
 
 ```bash
 python server.py stdio
 ```
+
+`MCP_API_KEY` is still required at startup so configuration fails closed, but
+HTTP bearer middleware does not authenticate STDIO. Use STDIO only where the
+parent process and local pipe boundary are already trusted.
 
 ### Using FastMCP CLI
 
@@ -147,19 +183,30 @@ To connect Letta to this MCP server, add to your MCP configuration:
   "mcpServers": {
     "lit-signer": {
       "transport": "streamable-http",
-      "url": "http://localhost:8001/mcp"
+      "url": "http://localhost:8001/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_API_KEY}"
+      }
     }
   }
 }
 ```
 
+The exact environment-variable interpolation syntax is client-specific. Verify
+that your client resolves the token from its secret/environment store rather
+than persisting the literal credential in tracked configuration or transcripts.
+
 ## Security Considerations
 
-1. **PKP Control**: The PKP signs based on Lit Action logic. Ensure your Lit Actions have appropriate access controls.
+1. **Transport authentication**: Every HTTP MCP request, including discovery and read-only tools, requires the configured bearer token. Network filtering is defense in depth, not a substitute for authentication.
 
-2. **Session Keys**: The `DEPLOYER_PRIVATE_KEY` is only used for Lit session authentication, not for signing transactions.
+2. **Binding**: The safe default is loopback. The static verifier is transitional and must not be treated as production or identity-bound authorization. Any temporary non-loopback migration requires an explicit `MCP_HOST`, TLS, and source-network restrictions.
 
-3. **Network**: Currently configured for `datil-test` (Lit testnet) and Base Sepolia. Update for production.
+3. **PKP control**: The PKP signs based on Lit Action logic. The current action must not be treated as an identity-bound production policy until destination, method, token, rate, and caller authorization are constrained and tested.
+
+4. **Session keys**: The `DEPLOYER_PRIVATE_KEY` is used for Lit session authentication. Although it is not the PKP transaction key, compromise can grant meaningful signing-session authority; protect and rotate it accordingly.
+
+5. **Network and chain**: The current code targets `datil-test` and Base Sepolia. It is testnet software, not a production signer boundary.
 
 ## License
 

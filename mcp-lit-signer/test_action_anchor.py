@@ -19,12 +19,14 @@ import time
 from pathlib import Path
 from web3 import Web3
 from fastmcp import Client
+from fastmcp.client.auth import BearerAuth
 from dotenv import load_dotenv
 
 # Load environment for API key
 ENV_PATH = Path(__file__).parent.parent / '.env'
 load_dotenv(ENV_PATH)
 MCP_API_KEY = os.getenv('MCP_API_KEY')
+MCP_URL = os.getenv('MCP_URL', 'http://localhost:8001/mcp')
 
 
 # Test work product: A sample document that could be an EIP draft section
@@ -124,8 +126,15 @@ async def test_action_anchor_live():
     print("Action Anchor LIVE Test (via MCP Server)")
     print("=" * 60)
     
+    if not MCP_API_KEY:
+        print("   ❌ ERROR: MCP_API_KEY not set in .env!")
+        return
+
     print("\n🔌 Connecting to MCP server...")
-    async with Client("http://localhost:8847/mcp") as client:
+    async with Client(
+        MCP_URL,
+        auth=BearerAuth(MCP_API_KEY),
+    ) as client:
         print("   Connected!")
         
         # List available tools to verify anchor_action_via_pkp exists
@@ -143,10 +152,7 @@ async def test_action_anchor_live():
             return
         
         print("\n✍️  Calling anchor_action_via_pkp...")
-        if not MCP_API_KEY:
-            print("   ❌ ERROR: MCP_API_KEY not set in .env!")
-            return
-        
+
         result = await client.call_tool("anchor_action_via_pkp", {
             "token_id": 2,  # Token 2 where PKP has executor permissions
             "work_product_content": SAMPLE_WORK_PRODUCT,
@@ -156,7 +162,6 @@ async def test_action_anchor_live():
             "creator_name": "Kieran",
             "collaborators": ["Michael Alan Ruderman"],
             "anchor_type": "authorship",
-            "api_key": MCP_API_KEY  # Authentication required!
         })
         
         print(f"\n📦 Result:")

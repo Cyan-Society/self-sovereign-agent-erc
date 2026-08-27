@@ -25,17 +25,26 @@ import hashlib
 from pathlib import Path
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
-from typing import Any, Optional
-from functools import wraps
+from typing import Any
 
 from fastmcp import FastMCP, Context
+from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from dotenv import load_dotenv
 from web3 import Web3
 import rlp
 from eth_utils import keccak
 
-# Load environment from project root
-ENV_PATH = Path(__file__).parent.parent / '.env'
+def resolve_env_path(server_path: Path = Path(__file__)) -> Path:
+    """Resolve configuration for flat deployments first, then repository checkouts."""
+    server_directory = server_path.resolve().parent
+    candidates = (
+        server_directory / ".env",
+        server_directory.parent / ".env",
+    )
+    return next((candidate for candidate in candidates if candidate.is_file()), candidates[0])
+
+
+ENV_PATH = resolve_env_path()
 load_dotenv(ENV_PATH)
 
 # Configuration
@@ -46,31 +55,28 @@ PKP_ETH_ADDRESS = os.getenv('LIT_PKP_ETH_ADDRESS')
 DEPLOYER_PRIVATE_KEY = os.getenv('DEPLOYER_PRIVATE_KEY')  # For session auth
 CHAIN_ID = 84532  # Base Sepolia
 
-# Authentication
+# Authentication and network exposure
 MCP_API_KEY = os.getenv('MCP_API_KEY')
-if not MCP_API_KEY:
-    # Generate a secure key if not set (for first-time setup)
-    print("WARNING: MCP_API_KEY not set in environment!")
-    print("Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
-    print("Then add to .env: MCP_API_KEY=<generated_key>")
-    # For safety, don't auto-generate - require explicit configuration
-    MCP_API_KEY = None
+MCP_HOST = os.getenv('MCP_HOST', '127.0.0.1')
 
 
-def verify_api_key(provided_key: Optional[str]) -> bool:
-    """Verify the provided API key matches the configured key."""
-    if MCP_API_KEY is None:
-        # If no key configured, reject all requests (fail secure)
-        return False
-    if provided_key is None:
-        return False
-    # Use constant-time comparison to prevent timing attacks
-    return secrets.compare_digest(provided_key, MCP_API_KEY)
+def build_auth_provider(api_key: str | None = MCP_API_KEY) -> StaticTokenVerifier:
+    """Build fail-closed HTTP bearer authentication for the whole MCP surface."""
+    if not api_key:
+        raise RuntimeError(
+            "MCP_API_KEY is required. Generate one with: "
+            "python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
 
-
-class AuthenticationError(Exception):
-    """Raised when API key authentication fails."""
-    pass
+    return StaticTokenVerifier(
+        tokens={
+            api_key: {
+                "client_id": "lit-pkp-signer-client",
+                "scopes": ["mcp:access"],
+            }
+        },
+        required_scopes=["mcp:access"],
+    )
 
 # Contract ABI fragments
 ANCHOR_STATE_ABI = [
@@ -282,10 +288,12 @@ mcp = FastMCP(
     Lit Protocol PKP signatures. Use anchor_state_via_pkp to sign and 
     broadcast state anchoring transactions.
     
-    AUTHENTICATION REQUIRED: All signing tools require a valid api_key parameter.
-    Read-only tools (get_pkp_balance, verify_state_anchor) do not require authentication.
+    AUTHENTICATION REQUIRED: HTTP clients must provide MCP_API_KEY as an
+    Authorization: Bearer header. Authentication applies to the entire MCP
+    surface, including tool discovery and read-only tools.
     """,
-    lifespan=lifespan
+    lifespan=lifespan,
+    auth=build_auth_provider(),
 )
 
 
@@ -295,7 +303,6 @@ async def anchor_state_via_pkp(
     state_hash: str,
     state_uri: str,
     ctx: Context,
-    api_key: Optional[str] = None
 ) -> dict:
     """
     Anchor cognitive state on-chain using PKP signature.
@@ -308,18 +315,11 @@ async def anchor_state_via_pkp(
         token_id: The NFT token ID to anchor state for
         state_hash: The keccak256 hash of the state (hex string with 0x prefix)
         state_uri: URI pointing to the full state data (e.g., IPFS URI)
-        api_key: Optional authentication key (uses MCP_API_KEY env var if not provided)
-    
+
     Returns:
         dict with tx_hash, block_number, gas_used on success
         dict with error message on failure
     """
-    # Authenticate - use provided key or fall back to environment variable
-    effective_key = api_key if api_key else MCP_API_KEY
-    if not verify_api_key(effective_key):
-        print(f"[AUTH] Rejected anchor_state_via_pkp - invalid API key")
-        return {"error": "Authentication failed: invalid or missing API key"}
-    
     await ctx.info(f"Anchoring state for token {token_id}")
     
     try:
@@ -411,7 +411,6 @@ async def anchor_action_via_pkp(
     collaborators: list[str],
     anchor_type: str,
     ctx: Context,
-    api_key: Optional[str] = None
 ) -> dict:
     """
     Anchor a work product (action) on-chain for authorship verification.
@@ -434,18 +433,11 @@ async def anchor_action_via_pkp(
         creator_name: Human-readable name of the creator agent
         collaborators: List of collaborator names (human or agent)
         anchor_type: Type of action ("authorship", "decision", "action")
-        api_key: Optional authentication key (uses MCP_API_KEY env var if not provided)
-    
+
     Returns:
         dict with tx_hash, action_anchor_data, explorer_url on success
         dict with error message on failure
     """
-    # Authenticate - use provided key or fall back to environment variable
-    effective_key = api_key if api_key else MCP_API_KEY
-    if not verify_api_key(effective_key):
-        print(f"[AUTH] Rejected anchor_action_via_pkp - invalid API key")
-        return {"error": "Authentication failed: invalid or missing API key"}
-    
     await ctx.info(f"Anchoring action for token {token_id}: {description}")
     
     try:
@@ -594,17 +586,30 @@ async def verify_state_anchor(token_id: int, ctx: Context) -> dict:
         return {"error": str(e)}
 
 
-if __name__ == "__main__":
-    import sys
-    
-    # Default to HTTP transport for remote access
-    transport = sys.argv[1] if len(sys.argv) > 1 else "http"
-    port = int(sys.argv[2]) if len(sys.argv) > 2 else 8001
-    
-    print(f"Starting Lit PKP Signer MCP Server...")
+def run_server(transport: str = "http", port: int = 8001) -> None:
+    """Run the selected transport without leaking HTTP-only arguments to STDIO."""
+    print("Starting Lit PKP Signer MCP Server...")
     print(f"  Transport: {transport}")
+    print(f"  Host: {MCP_HOST}")
     print(f"  Port: {port}")
     print(f"  Contract: {CONTRACT_ADDRESS}")
     print(f"  PKP Address: {PKP_ETH_ADDRESS}")
-    
-    mcp.run(transport=transport, host="0.0.0.0", port=port)
+
+    if transport == "stdio":
+        mcp.run(transport=transport)
+        return
+
+    if MCP_HOST not in {"127.0.0.1", "::1", "localhost"}:
+        print(
+            "WARNING: MCP_HOST exposes a transitional shared-token signer. "
+            "Require a firewall and TLS proxy; do not treat this as identity-bound auth."
+        )
+    mcp.run(transport=transport, host=MCP_HOST, port=port)
+
+
+if __name__ == "__main__":
+    import sys
+
+    selected_transport = sys.argv[1] if len(sys.argv) > 1 else "http"
+    selected_port = int(sys.argv[2]) if len(sys.argv) > 2 else 8001
+    run_server(selected_transport, selected_port)

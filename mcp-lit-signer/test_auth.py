@@ -1,114 +1,168 @@
 #!/usr/bin/env python3
-"""
-Test API key authentication on the MCP server.
+"""Regression tests for MCP transport authentication and safe bind defaults."""
 
-This verifies that:
-1. Requests without api_key are rejected
-2. Requests with wrong api_key are rejected  
-3. Requests with correct api_key succeed
-"""
-
-import asyncio
+import importlib.util
 import os
+import sys
+import unittest
 from pathlib import Path
-from fastmcp import Client
-from dotenv import load_dotenv
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-# Load environment
-ENV_PATH = Path(__file__).parent.parent / '.env'
-load_dotenv(ENV_PATH)
-MCP_API_KEY = os.getenv('MCP_API_KEY')
+from starlette.testclient import TestClient
+
+SERVER_PATH = Path(__file__).with_name("server.py")
+TEST_API_KEY = "test-only-mcp-bearer-token"
 
 
-async def test_auth():
-    """Test authentication scenarios."""
-    print("=" * 60)
-    print("MCP Server Authentication Tests")
-    print("=" * 60)
-    
-    async with Client("http://localhost:8847/mcp") as client:
-        print("\n✅ Connected to MCP server")
-        
-        # Test 1: Read-only tool (should work without auth)
-        print("\n--- Test 1: Read-only tool (no auth required) ---")
-        result = await client.call_tool("get_pkp_balance", {})
-        if result.is_error:
-            print(f"   ❌ Unexpected error: {result.content}")
-        else:
-            data = result.data
-            if "error" in data:
-                print(f"   ❌ Error: {data['error']}")
-            else:
-                print(f"   ✅ Success! PKP balance: {data['balance_eth']} ETH")
-        
-        # Test 2: Signing tool WITHOUT api_key (should fail)
-        print("\n--- Test 2: Signing tool WITHOUT api_key (should fail) ---")
-        try:
-            result = await client.call_tool("anchor_state_via_pkp", {
-                "token_id": 2,
-                "state_hash": "0x" + "ab" * 32,
-                "state_uri": "test://auth-test"
-                # NO api_key!
-            })
-            if result.is_error:
-                print(f"   ✅ Correctly rejected (error in response): {result.content}")
-            else:
-                data = result.data
-                if "error" in data and "Authentication" in data["error"]:
-                    print(f"   ✅ Correctly rejected: {data['error']}")
-                else:
-                    print(f"   ❌ Should have been rejected! Got: {data}")
-        except Exception as e:
-            # FastMCP validates required params before calling - this is expected
-            if "api_key" in str(e) and "Missing" in str(e):
-                print(f"   ✅ Correctly rejected at validation: api_key is required parameter")
-            else:
-                print(f"   ❌ Unexpected error: {e}")
-        
-        # Test 3: Signing tool with WRONG api_key (should fail)
-        print("\n--- Test 3: Signing tool with WRONG api_key (should fail) ---")
-        result = await client.call_tool("anchor_state_via_pkp", {
-            "token_id": 2,
-            "state_hash": "0x" + "ab" * 32,
-            "state_uri": "test://auth-test",
-            "api_key": "invalid-api-key"
-        })
-        if result.is_error:
-            print(f"   ✅ Correctly rejected (error in response): {result.content}")
-        else:
-            data = result.data
-            if "error" in data and "Authentication" in data["error"]:
-                print(f"   ✅ Correctly rejected: {data['error']}")
-            else:
-                print(f"   ❌ Should have been rejected! Got: {data}")
-        
-        # Test 4: Signing tool with CORRECT api_key (should succeed to validation)
-        print("\n--- Test 4: Signing tool with CORRECT api_key (should pass auth) ---")
-        if not MCP_API_KEY:
-            print("   ⚠️  MCP_API_KEY not set, skipping test")
-        else:
-            result = await client.call_tool("anchor_state_via_pkp", {
-                "token_id": 2,
-                "state_hash": "0x" + "ab" * 32,  # Invalid hash for actual anchoring
-                "state_uri": "test://auth-test",
-                "api_key": MCP_API_KEY
-            })
-            if result.is_error:
-                print(f"   Result: {result.content}")
-            else:
-                data = result.data
-                if "error" in data and "Authentication" in data["error"]:
-                    print(f"   ❌ Auth should have passed! Got: {data['error']}")
-                elif "error" in data:
-                    # Other errors are fine - auth passed but something else failed
-                    print(f"   ✅ Auth passed! (subsequent error: {data['error'][:50]}...)")
-                else:
-                    print(f"   ✅ Auth passed and operation succeeded!")
-        
-        print("\n" + "=" * 60)
-        print("Authentication tests complete!")
-        print("=" * 60)
+def load_server_module():
+    """Load server.py with deterministic test configuration."""
+    module_name = "mcp_lit_signer_server_test"
+    sys.modules.pop(module_name, None)
+
+    with patch.dict(
+        os.environ,
+        {
+            "MCP_API_KEY": TEST_API_KEY,
+            "MCP_HOST": "127.0.0.1",
+        },
+        clear=False,
+    ):
+        spec = importlib.util.spec_from_file_location(module_name, SERVER_PATH)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        return module
+
+
+class AuthenticationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = load_server_module()
+        cls.initialize_request = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "auth-regression-test", "version": "1"},
+            },
+        }
+        cls.base_headers = {"Accept": "application/json, text/event-stream"}
+
+    def request(self, authorization=None, payload=None):
+        headers = dict(self.base_headers)
+        if authorization is not None:
+            headers["Authorization"] = authorization
+        app = self.server.mcp.http_app(stateless_http=True, json_response=True)
+        with TestClient(app) as client:
+            return client.post(
+                "/mcp",
+                headers=headers,
+                json=payload or self.initialize_request,
+            )
+
+    def rpc_request(self, method, params=None):
+        return {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": method,
+            "params": params or {},
+        }
+
+    def test_missing_bearer_token_is_rejected(self):
+        response = self.request()
+        self.assertEqual(response.status_code, 401)
+
+    def test_invalid_bearer_token_is_rejected(self):
+        response = self.request("Bearer incorrect-token")
+        self.assertEqual(response.status_code, 401)
+
+    def test_valid_bearer_token_is_accepted(self):
+        response = self.request(f"Bearer {TEST_API_KEY}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("result", response.json())
+
+    def test_tool_discovery_requires_bearer_token(self):
+        payload = self.rpc_request("tools/list")
+        self.assertEqual(self.request(payload=payload).status_code, 401)
+        response = self.request(f"Bearer {TEST_API_KEY}", payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("tools", response.json()["result"])
+
+    def test_tool_calls_require_bearer_token(self):
+        payload = self.rpc_request(
+            "tools/call",
+            {"name": "not-a-real-tool", "arguments": {}},
+        )
+        self.assertEqual(self.request(payload=payload).status_code, 401)
+        response = self.request(f"Bearer {TEST_API_KEY}", payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["result"]["isError"])
+
+    def test_missing_server_key_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "MCP_API_KEY is required"):
+            self.server.build_auth_provider(None)
+
+    def test_default_host_is_loopback(self):
+        self.assertEqual(self.server.MCP_HOST, "127.0.0.1")
+
+    def test_flat_deployment_env_beside_server_takes_precedence(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            server_directory = root / "mcp-lit-signer"
+            server_directory.mkdir()
+            server_path = server_directory / "server.py"
+            local_env = server_directory / ".env"
+            repository_env = root / ".env"
+            server_path.touch()
+            local_env.touch()
+            repository_env.touch()
+
+            self.assertEqual(self.server.resolve_env_path(server_path), local_env)
+
+    def test_repository_root_env_is_fallback(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            server_directory = root / "mcp-lit-signer"
+            server_directory.mkdir()
+            server_path = server_directory / "server.py"
+            repository_env = root / ".env"
+            server_path.touch()
+            repository_env.touch()
+
+            self.assertEqual(self.server.resolve_env_path(server_path), repository_env)
+
+    def test_missing_env_returns_flat_deployment_candidate(self):
+        with TemporaryDirectory() as directory:
+            server_path = Path(directory) / "server.py"
+            expected = server_path.parent / ".env"
+
+            self.assertEqual(self.server.resolve_env_path(server_path), expected)
+
+    def test_stdio_does_not_receive_http_bind_arguments(self):
+        with patch.object(self.server.mcp, "run") as run:
+            self.server.run_server("stdio")
+            run.assert_called_once_with(transport="stdio")
+
+    def test_api_key_is_not_in_tool_schema(self):
+        async def assert_schemas():
+            tools = await self.server.mcp.list_tools()
+            signing_tools = {
+                tool.name: tool
+                for tool in tools
+                if tool.name in {"anchor_state_via_pkp", "anchor_action_via_pkp"}
+            }
+            self.assertEqual(len(signing_tools), 2)
+            for tool in signing_tools.values():
+                properties = tool.parameters.get("properties", {})
+                self.assertNotIn("api_key", properties)
+
+        import asyncio
+
+        asyncio.run(assert_schemas())
 
 
 if __name__ == "__main__":
-    asyncio.run(test_auth())
+    unittest.main()

@@ -1,7 +1,7 @@
 # Lit PKP Signer MCP Server Dependencies
 
 # MCP server framework
-fastmcp>=2.0.0
+fastmcp==3.4.5
 
 # Ethereum/Web3
 web3>=6.0.0

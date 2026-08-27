@@ -6,14 +6,23 @@ Tests the basic functionality without actually signing transactions.
 """
 
 import asyncio
+import os
 from fastmcp import Client
+from fastmcp.client.auth import BearerAuth
 
 async def test_server():
     """Test the MCP server tools."""
     
+    api_key = os.environ.get("MCP_API_KEY")
+    if not api_key:
+        raise RuntimeError("MCP_API_KEY must be set for the integration test")
+
     print("Connecting to Lit PKP Signer MCP Server...")
-    
-    async with Client("http://localhost:8001/mcp") as client:
+
+    async with Client(
+        "http://localhost:8001/mcp",
+        auth=BearerAuth(api_key),
+    ) as client:
         # List available tools
         print("\n📋 Available tools:")
         tools = await client.list_tools()

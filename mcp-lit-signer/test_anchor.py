@@ -7,9 +7,11 @@ This will actually sign and broadcast a transaction, costing gas.
 
 import asyncio
 import json
+import os
 import time
 from web3 import Web3
 from fastmcp import Client
+from fastmcp.client.auth import BearerAuth
 
 async def test_anchor():
     """Test the anchor_state_via_pkp tool."""
@@ -36,8 +38,15 @@ async def test_anchor():
     print(f"   Hash: 0x{state_hash.hex()}")
     print(f"   URI: {state_uri}")
     
+    api_key = os.environ.get("MCP_API_KEY")
+    if not api_key:
+        raise RuntimeError("MCP_API_KEY must be set for the integration test")
+
     print("\n🔌 Connecting to MCP server...")
-    async with Client("http://localhost:8001/mcp") as client:
+    async with Client(
+        "http://localhost:8001/mcp",
+        auth=BearerAuth(api_key),
+    ) as client:
         print("   Connected!")
         
         print("\n✍️  Calling anchor_state_via_pkp...")

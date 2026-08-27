@@ -16,12 +16,14 @@ import json
 import os
 from pathlib import Path
 from fastmcp import Client
+from fastmcp.client.auth import BearerAuth
 from dotenv import load_dotenv
 
 # Load environment for API key
 ENV_PATH = Path(__file__).parent.parent / '.env'
 load_dotenv(ENV_PATH)
 MCP_API_KEY = os.getenv('MCP_API_KEY')
+MCP_URL = os.getenv('MCP_URL', 'http://localhost:8001/mcp')
 
 
 async def anchor_eip_draft():
@@ -44,7 +46,10 @@ async def anchor_eip_draft():
         return None
     
     print("\n🔌 Connecting to MCP server...")
-    async with Client("http://localhost:8847/mcp") as client:
+    async with Client(
+        MCP_URL,
+        auth=BearerAuth(MCP_API_KEY),
+    ) as client:
         print("   Connected!")
         
         print("\n✍️  Calling anchor_action_via_pkp...")
@@ -59,7 +64,6 @@ async def anchor_eip_draft():
             "creator_name": "Kieran",
             "collaborators": ["Michael Alan Ruderman"],
             "anchor_type": "authorship",
-            "api_key": MCP_API_KEY  # Authentication required!
         })
         
         print(f"\n📦 Result:")
