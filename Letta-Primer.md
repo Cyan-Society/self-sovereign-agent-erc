@@ -489,7 +489,7 @@ pip install letta-client
 
 ```bash
 # Required for Letta Cloud
-LETTA_API_KEY=REDACTED_ROTATED_KEY
+LETTA_API_KEY=REPLACE_ME
 
 # Store agent ID after creation (Next.js)
 LETTA_AGENT_ID=agent-xxxxxxxxx
